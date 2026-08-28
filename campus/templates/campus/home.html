@@ -1,0 +1,133 @@
+{% extends "campus/base.html" %}
+{% load static %}
+
+{% block title %}Campus Map{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-soft map-card">
+            <div class="map-shell">
+                <div class="map-overlay">
+                    <div class="search-wrap">
+                        <div class="search-input-group">
+                            <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                                <circle cx="11" cy="11" r="6"></circle>
+                                <line x1="20" y1="20" x2="15.8" y2="15.8"></line>
+                            </svg>
+                            <input type="text" id="searchBox" class="search-input" placeholder="Search destination… (Library, Cafeteria, IT room, …)" autocomplete="off" />
+                        </div>
+                        <div id="searchResults" class="list-group search-results"></div>
+                    </div>
+                    <div class="overlay-actions">
+                        <span id="campusStatusBadge" class="badge bg-secondary">Locating…</span>
+                        <button id="locateBtn" class="locate-btn" title="Center on my location" aria-label="Center on my location">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <line x1="12" y1="2" x2="12" y2="5"></line>
+                                <line x1="12" y1="19" x2="12" y2="22"></line>
+                                <line x1="2" y1="12" x2="5" y2="12"></line>
+                                <line x1="19" y1="12" x2="22" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-soft mb-4 route-card">
+            <div class="card-body">
+                <div class="panel-header">
+                    <span class="panel-icon">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path>
+                            <circle cx="12" cy="10" r="2.4"></circle>
+                        </svg>
+                    </span>
+                    <h2 class="panel-title">Route</h2>
+                </div>
+
+                <div class="route-destination">
+                    <span class="route-label">Destination</span>
+                    <strong id="destName" class="route-destination-name">Choose a place to navigate</strong>
+                    <p id="destDescription" class="route-description"></p>
+                </div>
+
+                <div class="route-stats">
+                    <div class="stat-tile">
+                        <span class="stat-icon">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="3" y="8" width="18" height="8" rx="1.5"></rect>
+                                <line x1="7" y1="8" x2="7" y2="11"></line>
+                                <line x1="11" y1="8" x2="11" y2="11"></line>
+                                <line x1="15" y1="8" x2="15" y2="11"></line>
+                                <line x1="19" y1="8" x2="19" y2="11"></line>
+                            </svg>
+                        </span>
+                        <div class="stat-copy">
+                            <span class="stat-label">Distance</span>
+                            <strong id="routeDistance" class="stat-value">—</strong>
+                        </div>
+                    </div>
+                    <div class="stat-tile">
+                        <span class="stat-icon">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <polyline points="12,7 12,12 15.5,14"></polyline>
+                            </svg>
+                        </span>
+                        <div class="stat-copy">
+                            <span class="stat-label">Walking time</span>
+                            <strong id="routeTime" class="stat-value">—</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="navigateBtn" class="btn-navigate" disabled>Start navigation</button>
+                <div id="routeMessage" class="route-message"></div>
+            </div>
+        </div>
+
+        <div class="card shadow-soft activity-card">
+            <div class="card-body">
+                <div class="panel-header">
+                    <span class="panel-icon">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9z"></path>
+                            <path d="M10 19a2 2 0 0 0 4 0"></path>
+                        </svg>
+                    </span>
+                    <h2 class="panel-title">Zone Activity</h2>
+                </div>
+                <div id="geofenceLog" class="geofence-log">No zone events yet.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container for geofence enter/exit notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        // Values injected from settings.py via campus.views.home.
+        window.CAMPUS_CONFIG = {
+            centerLat: {{ map_center_latitude }},
+            centerLng: {{ map_center_longitude }},
+            defaultZoom: {{ default_zoom }}
+        };
+    </script>
+    <script src="{% static 'campus/js/haversine.js' %}"></script>
+    <script src="{% static 'campus/js/point-in-polygon.js' %}"></script>
+    <script src="{% static 'campus/js/basemaps.js' %}"></script>
+    <script src="{% static 'campus/js/toast.js' %}"></script>
+    <script src="{% static 'campus/js/map.js' %}"></script>
+    <script src="{% static 'campus/js/location.js' %}"></script>
+    <script src="{% static 'campus/js/geofence.js' %}"></script>
+    <script src="{% static 'campus/js/boundary.js' %}"></script>
+    <script src="{% static 'campus/js/navigation.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "admin/change_form.html" %}
+
+{% block content %}
+{{ block.super }}
+<script>
+    window.CAMPUS_CONFIG = {
+        centerLat: {{ campus_map_center_lat }},
+        centerLng: {{ campus_map_center_lng }},
+        defaultZoom: {{ campus_default_zoom }}
+    };
+</script>
+<div style="max-width:640px;margin-top:1.5em;">
+    <p>Click on the map to set the Latitude / Longitude fields above.</p>
+    <div id="pickerMap" style="height:400px;border-radius:8px;"></div>
+</div>
+{% endblock %}

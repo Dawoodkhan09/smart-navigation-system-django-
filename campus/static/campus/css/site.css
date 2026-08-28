@@ -1,0 +1,575 @@
+/* ==========================================================================
+   Campus Navigation — design tokens
+   A single confident accent (deep emerald, not the generic SaaS blue),
+   frosted-glass surfaces over a soft tri-tone backdrop, restrained shadows.
+   ========================================================================== */
+:root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+    --accent: #0f6d4c;
+    --accent-dark: #0b5238;
+    --accent-soft: rgba(15, 109, 76, .12);
+
+    --slate: #475569;
+    --slate-soft: rgba(71, 85, 105, .12);
+    --danger: #b91c1c;
+
+    --text: #12181f;
+    --text-muted: #5b6472;
+    --text-faint: #8a93a1;
+
+    --border: rgba(18, 24, 31, .09);
+
+    --glass: rgba(255, 255, 255, .66);
+    --glass-strong: rgba(255, 255, 255, .82);
+    --glass-border: rgba(255, 255, 255, .55);
+    --glass-blur: 18px;
+
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 9px;
+
+    --shadow-sm: 0 1px 2px rgba(18, 24, 31, .06);
+    --shadow-md: 0 10px 30px rgba(18, 24, 31, .10);
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: var(--font-sans);
+    color: var(--text);
+    background-color: #eef1ec;
+    background-image:
+        radial-gradient(900px 520px at 6% -8%, rgba(15, 109, 76, .12), transparent 60%),
+        radial-gradient(760px 620px at 100% 0%, rgba(37, 99, 235, .08), transparent 55%),
+        radial-gradient(760px 760px at 46% 115%, rgba(217, 119, 6, .07), transparent 60%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+.page-container {
+    max-width: 1360px;
+    padding-bottom: 3rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+}
+
+/* Fallback for browsers without backdrop-filter support: fall back to a
+   solid-ish surface instead of a see-through one, so panels stay legible. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass, .shadow-soft, .site-navbar, .search-input-group, .overlay-actions .badge, .locate-btn, .toast {
+        background-color: #ffffff !important;
+    }
+}
+
+/* ==========================================================================
+   Navbar
+   ========================================================================== */
+.site-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1040;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border-bottom: 1px solid var(--border);
+    padding-top: .65rem;
+    padding-bottom: .65rem;
+}
+
+.site-navbar .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.site-navbar .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.site-navbar .brand-text strong {
+    color: var(--accent);
+    font-weight: 800;
+}
+
+.site-navbar .nav-link {
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: .5rem .9rem !important;
+    border-radius: var(--radius-sm);
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.site-navbar .nav-link:hover,
+.site-navbar .nav-link.active {
+    color: var(--accent-dark);
+    background: var(--accent-soft);
+}
+
+/* ==========================================================================
+   Glass card / panel styling
+   ========================================================================== */
+.shadow-soft {
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    box-shadow: var(--shadow-md);
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-bottom: 1rem;
+}
+
+.panel-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.panel-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text);
+}
+
+/* ==========================================================================
+   Map card + floating glass overlay controls
+   ========================================================================== */
+.map-card {
+    overflow: hidden;
+    background: var(--glass-strong);
+}
+
+.map-shell {
+    position: relative;
+}
+
+.map-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 110px;
+    background: linear-gradient(to bottom, rgba(18, 24, 31, .22), rgba(18, 24, 31, 0));
+    pointer-events: none;
+    z-index: 500;
+}
+
+#map {
+    height: 78vh;
+    min-height: 460px;
+    width: 100%;
+    display: block;
+}
+
+.map-overlay {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.search-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    max-width: 420px;
+}
+
+.search-input-group {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: .6rem .9rem;
+    transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+.search-wrap:focus-within .search-input-group {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md), 0 0 0 3px var(--accent-soft);
+}
+
+.search-icon {
+    color: var(--text-faint);
+    flex-shrink: 0;
+}
+
+.search-input {
+    border: 0;
+    outline: none;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: .93rem;
+    font-family: var(--font-sans);
+    background: transparent;
+    color: var(--text);
+}
+
+.search-input::placeholder {
+    color: var(--text-faint);
+}
+
+.search-results {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: 100%;
+    max-height: 320px;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--glass-border);
+}
+
+.search-results:empty {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+#searchResults.list-group .list-group-item {
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    padding: .65rem .9rem;
+    font-family: var(--font-sans);
+    color: var(--text);
+}
+
+#searchResults.list-group .list-group-item:last-child {
+    border-bottom: 0;
+}
+
+#searchResults.list-group .list-group-item:hover,
+#searchResults.list-group .list-group-item:focus {
+    background: var(--accent-soft);
+}
+
+.overlay-actions {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-shrink: 0;
+}
+
+.overlay-actions .badge {
+    padding: .5em .8em;
+    font-weight: 600;
+    font-size: .74rem;
+    border-radius: var(--radius-sm);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--glass-border);
+}
+
+.overlay-actions .badge.bg-success {
+    background: rgba(15, 109, 76, .82) !important;
+    color: #ffffff !important;
+}
+
+.overlay-actions .badge.bg-secondary {
+    background: rgba(71, 85, 105, .78) !important;
+    color: #ffffff !important;
+}
+
+.overlay-actions .badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: .45em;
+    vertical-align: middle;
+}
+
+.locate-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    box-shadow: var(--shadow-md);
+    color: var(--text);
+    cursor: pointer;
+    transition: color .12s ease, border-color .12s ease;
+}
+
+.locate-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent-soft);
+}
+
+/* Leaflet's own zoom control (top-left) and layer switcher (top-right,
+   added by basemaps.js) would otherwise render directly underneath our
+   floating search bar / status badge - push both down to clear it. */
+.map-shell .leaflet-top {
+    margin-top: 74px;
+}
+
+/* ==========================================================================
+   Route card
+   ========================================================================== */
+.route-destination {
+    background: rgba(255, 255, 255, .35);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: .85rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.route-label {
+    display: block;
+    font-size: .74rem;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin-bottom: .2rem;
+}
+
+.route-destination-name {
+    display: block;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.route-description {
+    white-space: pre-line;
+    font-size: .82rem;
+    color: var(--text-muted);
+    margin: .35rem 0 0;
+}
+
+.route-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+    margin-bottom: 1.1rem;
+}
+
+.stat-tile {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    background: rgba(255, 255, 255, .35);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: .7rem .8rem;
+}
+
+.stat-icon {
+    display: inline-flex;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.stat-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.stat-label {
+    font-size: .72rem;
+    color: var(--text-faint);
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.btn-navigate {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: var(--radius-md);
+    padding: .72rem 1rem;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: .84rem;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    box-shadow: var(--shadow-sm);
+    transition: background-color .12s ease, box-shadow .12s ease;
+}
+
+.btn-navigate:hover:not(:disabled) {
+    background: var(--accent-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-navigate:disabled {
+    background: rgba(71, 85, 105, .25);
+    color: var(--text-faint);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.route-message {
+    color: var(--danger);
+    font-size: .8rem;
+    margin-top: .65rem;
+    min-height: 1em;
+}
+
+/* ==========================================================================
+   Activity (geofence log) card
+   ========================================================================== */
+.geofence-log {
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: .82rem;
+    color: var(--text-muted);
+}
+
+.geofence-log > div {
+    position: relative;
+    padding: .5rem 0 .5rem .95rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.geofence-log > div::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: .95rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.geofence-log > div:last-child {
+    border-bottom: 0;
+}
+
+/* ==========================================================================
+   Map markers
+   ========================================================================== */
+.you-are-here-dot {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 5px rgba(15, 109, 76, .25);
+}
+
+.destination-icon {
+    filter: drop-shadow(0 3px 5px rgba(18, 24, 31, .35));
+}
+
+/* ==========================================================================
+   Toast notifications — frosted glass card with a colored accent bar
+   instead of Bootstrap's default solid-fill toast.
+   ========================================================================== */
+.toast {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    box-shadow: var(--shadow-md);
+    font-size: .85rem;
+    overflow: hidden;
+    border-left-width: 3px;
+    border-left-style: solid;
+}
+
+.toast.text-bg-success {
+    background: var(--glass-strong) !important;
+    color: var(--text) !important;
+    border-left-color: var(--accent);
+}
+
+.toast.text-bg-secondary {
+    background: var(--glass-strong) !important;
+    color: var(--text) !important;
+    border-left-color: var(--slate);
+}
+
+.toast .btn-close {
+    filter: none;
+    opacity: .5;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 991.98px) {
+    #map {
+        height: 60vh;
+        min-height: 360px;
+    }
+
+    .map-overlay {
+        flex-direction: column;
+    }
+
+    .search-wrap {
+        max-width: none;
+        width: 100%;
+    }
+
+    .overlay-actions {
+        align-self: flex-end;
+    }
+
+    .map-shell .leaflet-top {
+        margin-top: 128px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .route-stats {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,64 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<h1>Campus Boundary</h1>
+<p>
+    This is the real outline of the campus - not a circle. Click the map,
+    in order, around the campus edge (gate, boundary wall corners, ...).
+    Each click is saved immediately as the next point of the polygon.
+</p>
+
+<div style="display:flex;gap:2em;flex-wrap:wrap;">
+    <div style="flex:1 1 480px;">
+        <div id="boundaryMap" style="height:500px;border-radius:8px;"></div>
+    </div>
+    <div style="flex:1 1 280px;">
+        <p>
+            <button type="button" id="undoBtn" class="button">Undo last point</button>
+            <button type="button" id="clearBtn" class="button">Clear all</button>
+        </p>
+        <p><span id="pointCount">{{ points|length }}</span> point(s). Need at least 3 for a closed shape.</p>
+        <ol id="pointList">
+            {% for p in points %}
+                <li>{{ p.latitude|floatformat:6 }}, {{ p.longitude|floatformat:6 }}</li>
+            {% endfor %}
+        </ol>
+
+        <hr />
+        <h3>Or import from geojson.io</h3>
+        <p>
+            Draw the boundary on <a href="https://geojson.io" target="_blank" rel="noopener">geojson.io</a>
+            (a LineString or Polygon both work), then paste the GeoJSON here.
+            This <strong>replaces</strong> the current boundary.
+        </p>
+        <textarea id="geoJsonInput" rows="6" style="width:100%;" placeholder='{"type":"FeatureCollection", ...}'></textarea>
+        <p><button type="button" id="importBtn" class="button">Import GeoJSON</button></p>
+        <div id="importMessage"></div>
+    </div>
+</div>
+
+<script>
+    window.CAMPUS_CONFIG = {
+        centerLat: {{ campus_map_center_lat }},
+        centerLng: {{ campus_map_center_lng }},
+        defaultZoom: 16
+    };
+    window.INITIAL_BOUNDARY_POINTS = {{ initial_points_json }};
+    window.BOUNDARY_ROUTES = {
+        addPoint: "{% url 'admin:campus_boundarypoint_add_point' %}",
+        removeLastPoint: "{% url 'admin:campus_boundarypoint_remove_last_point' %}",
+        clearAll: "{% url 'admin:campus_boundarypoint_clear_all' %}",
+        importPoints: "{% url 'admin:campus_boundarypoint_import_points' %}"
+    };
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'campus/js/basemaps.js' %}"></script>
+<script src="{% static 'campus/js/admin-boundary-editor.js' %}"></script>
+{% endblock %}

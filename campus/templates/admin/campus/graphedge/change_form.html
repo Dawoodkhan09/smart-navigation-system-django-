@@ -1,0 +1,36 @@
+{% extends "admin/change_form.html" %}
+
+{% block content %}
+{{ block.super }}
+<div style="margin-top:1em;">
+    <button type="button" id="suggestDistanceBtn" class="button">Suggest distance from GPS (Haversine)</button>
+    <span id="suggestDistanceMsg" style="margin-left:.75em;"></span>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('suggestDistanceBtn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async function () {
+        const fromId = document.getElementById('id_from_node').value;
+        const toId = document.getElementById('id_to_node').value;
+        const msg = document.getElementById('suggestDistanceMsg');
+        msg.textContent = '';
+
+        if (!fromId || !toId) {
+            msg.textContent = 'Select both From Node and To Node first.';
+            return;
+        }
+
+        const res = await fetch(`{% url 'admin:campus_graphedge_suggest_distance' %}?from_node_id=${fromId}&to_node_id=${toId}`);
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('id_distance').value = data.distance;
+            msg.textContent = `Suggested ${data.distance} m (straight-line). Adjust if the real walkway curves.`;
+        } else {
+            msg.textContent = 'Could not suggest a distance for those nodes.';
+        }
+    });
+});
+</script>
+{% endblock %}
