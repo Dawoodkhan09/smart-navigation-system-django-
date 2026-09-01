@@ -17,7 +17,7 @@
 <body>
     <nav class="navbar navbar-expand-sm site-navbar mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'home' %}">
+            <a class="navbar-brand" href="{% url 'tree' %}">
                 <span class="brand-mark">
                     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                         <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
@@ -31,7 +31,8 @@
             </button>
             <div class="collapse navbar-collapse" id="navMenu">
                 <ul class="navbar-nav ms-auto align-items-sm-center gap-sm-1">
-                    <li class="nav-item"><a class="nav-link active" href="{% url 'home' %}">Map</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'tree' %}active{% endif %}" href="{% url 'tree' %}">Locations</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'map' %}active{% endif %}" href="{% url 'map' %}">Map</a></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admin</a>
                         <ul class="dropdown-menu dropdown-menu-end">

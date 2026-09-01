@@ -24,6 +24,10 @@
         const res = await fetch('/api/locations');
         if (!res.ok) return;
         window.allLocations = await res.json();
+        // Lets other scripts (e.g. the ?location=<id> deep-link handler in
+        // home.html) wait until window.allLocations is actually populated
+        // before looking a node up in it.
+        document.dispatchEvent(new CustomEvent('campus:locationsLoaded'));
     }
 
     document.addEventListener('DOMContentLoaded', loadLocations);

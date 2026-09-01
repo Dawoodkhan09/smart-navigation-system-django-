@@ -3,7 +3,8 @@ from django.urls import path
 from . import api_views, views
 
 urlpatterns = [
-    path('', views.home, name='home'),
+    path('', views.locations_tree, name='tree'),
+    path('map/', views.map_view, name='map'),
     path('api/locations/search', api_views.location_search, name='api-location-search'),
     path('api/locations/<int:pk>', api_views.location_detail, name='api-location-detail'),
     path('api/locations', api_views.location_list, name='api-location-list'),

@@ -32,7 +32,9 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
-    h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()
+    'dawood09.pythonanywhere.com',
+    '127.0.0.1',
+    'localhost',
 ]
 
 # Needed by Django's CSRF checks for HTTPS deployments (e.g.

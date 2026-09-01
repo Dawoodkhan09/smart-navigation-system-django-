@@ -1,0 +1,30 @@
+{% extends "campus/base.html" %}
+{% load static %}
+
+{% block title %}Browse Locations{% endblock %}
+
+{% block content %}
+<div class="tree-page">
+    <div class="tree-header">
+        <div>
+            <h1 class="tree-title">Where do you want to go?</h1>
+            <p class="tree-subtitle">Pick a place below and the map will open centered right on it.</p>
+        </div>
+        <a href="{% url 'map' %}" class="tree-skip-link">
+            Skip to full map
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12,5 19,12 12,19"></polyline>
+            </svg>
+        </a>
+    </div>
+
+    <div id="locationTree" class="location-tree" data-map-url="{% url 'map' %}">
+        <div class="tree-loading">Loading locations…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'campus/js/location-tree.js' %}"></script>
+{% endblock %}

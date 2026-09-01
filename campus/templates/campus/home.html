@@ -130,4 +130,19 @@
     <script src="{% static 'campus/js/geofence.js' %}"></script>
     <script src="{% static 'campus/js/boundary.js' %}"></script>
     <script src="{% static 'campus/js/navigation.js' %}"></script>
+    <script>
+        // Deep link from the location tree page (campus/tree.html):
+        // /map/?location=<id> selects that node as the destination and
+        // pans the map to it, same as clicking its marker/search result.
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const locationId = parseInt(params.get('location'), 10);
+            if (!locationId) return;
+
+            document.addEventListener('campus:locationsLoaded', function onLoaded() {
+                document.removeEventListener('campus:locationsLoaded', onLoaded);
+                window.selectDestination(locationId, { pan: true });
+            });
+        })();
+    </script>
 {% endblock %}

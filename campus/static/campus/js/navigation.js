@@ -16,8 +16,12 @@
     const navigateBtn = document.getElementById('navigateBtn');
     const routeMessageEl = document.getElementById('routeMessage');
 
-    // Exposed globally so map.js marker popups can call it directly.
-    window.selectDestination = function (locationId) {
+    // Exposed globally so map.js marker popups (and the location-tree
+    // page's ?location=<id> deep link, see home.html) can call it
+    // directly. { pan: true } also recenters the map on the node - used
+    // for the tree deep link so the destination is actually visible, not
+    // just for search-box picks where the user is already looking at it.
+    window.selectDestination = function (locationId, { pan = false } = {}) {
         const loc = (window.allLocations || []).find((l) => l.id === locationId);
         if (!loc) return;
 
@@ -25,6 +29,8 @@
         destNameEl.textContent = loc.name;
         navigateBtn.disabled = false;
         routeMessageEl.textContent = '';
+
+        if (pan) window.campusMap.setView([loc.latitude, loc.longitude], 19);
 
         // Building descriptions list the rooms/classes/offices inside
         // (e.g. "Ground floor: CS HOD, Faculty room 2-5... | 1st floor:
