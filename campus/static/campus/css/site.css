@@ -593,10 +593,29 @@ h1, h2, h3, h4, h5, h6 {
     background: var(--accent-soft);
 }
 
+/* Same search-input-group look as the map overlay's search box, just laid
+   out inline in the page flow instead of floating over the map. */
+.tree-search-wrap {
+    max-width: none;
+    margin-bottom: 1.5rem;
+}
+
+.tree-search-wrap .search-input-group {
+    padding: .75rem 1rem;
+}
+
 .location-tree {
     display: flex;
     flex-direction: column;
     gap: .85rem;
+}
+
+.tree-node mark,
+.tree-branch-name mark {
+    background: rgba(217, 119, 6, .28);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 .1em;
 }
 
 .tree-loading,

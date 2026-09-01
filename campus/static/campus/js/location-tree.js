@@ -3,12 +3,20 @@
 // collapses its children; clicking a location node sends the user to the
 // map page centered on that node (see the ?location=<id> handler in
 // home.html, which map.js/navigation.js pick up once locations load).
+//
+// Also powers the search box at the top of the page: it filters this
+// same tree (matching name, category, AND description - which is where
+// a building's room numbers live, e.g. "Classroom 202") instead of
+// showing a separate results dropdown like the map page's search does.
 
 (function () {
     const treeEl = document.getElementById('locationTree');
     if (!treeEl) return;
 
+    const searchBox = document.getElementById('treeSearchBox');
     const mapUrl = treeEl.dataset.mapUrl || '/map/';
+
+    let allLocations = [];
 
     // Small stroke-icon set matching the rest of the app's SVG style
     // (see base.html / home.html inline icons) - one per seeded category,
@@ -32,6 +40,27 @@
         return div.innerHTML;
     }
 
+    function escapeRegExp(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Escapes text for HTML first, then wraps whatever matches `query`
+    // in <mark> - so a search for "202" highlights it inside "Classroom
+    // 202" wherever it shows up (name, category, or description preview).
+    function highlight(text, query) {
+        const safe = escapeHtml(text);
+        if (!query) return safe;
+        const re = new RegExp('(' + escapeRegExp(escapeHtml(query)) + ')', 'ig');
+        return safe.replace(re, '<mark>$1</mark>');
+    }
+
+    function matchesQuery(loc, query) {
+        const q = query.toLowerCase();
+        return (loc.name || '').toLowerCase().includes(q)
+            || (loc.category || '').toLowerCase().includes(q)
+            || (loc.description || '').toLowerCase().includes(q);
+    }
+
     function groupByCategory(locations) {
         const groups = new Map();
         locations.forEach((loc) => {
@@ -42,7 +71,7 @@
         return groups;
     }
 
-    function buildNode(loc) {
+    function buildNode(loc, query) {
         const node = document.createElement('button');
         node.type = 'button';
         node.className = 'tree-node';
@@ -53,8 +82,8 @@
         node.innerHTML = `
             <span class="tree-node-dot" aria-hidden="true"></span>
             <span class="tree-node-body">
-                <span class="tree-node-name">${escapeHtml(loc.name)}</span>
-                ${preview ? `<span class="tree-node-desc">${escapeHtml(shortPreview)}</span>` : ''}
+                <span class="tree-node-name">${highlight(loc.name, query)}</span>
+                ${preview ? `<span class="tree-node-desc">${highlight(shortPreview, query)}</span>` : ''}
             </span>
             <svg class="tree-node-arrow" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="9,6 15,12 9,18"></polyline>
@@ -70,7 +99,7 @@
         return node;
     }
 
-    function buildBranch(category, locations, isOpen) {
+    function buildBranch(category, locations, isOpen, query) {
         const branch = document.createElement('div');
         branch.className = 'tree-branch' + (isOpen ? ' is-open' : '');
 
@@ -80,7 +109,7 @@
         header.setAttribute('aria-expanded', String(isOpen));
         header.innerHTML = `
             ${iconSvg(CATEGORY_ICONS[category] || DEFAULT_ICON, 'tree-branch-icon')}
-            <span class="tree-branch-name">${escapeHtml(category)}</span>
+            <span class="tree-branch-name">${highlight(category, query)}</span>
             <span class="tree-branch-count">${locations.length}</span>
             <svg class="tree-branch-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="6,9 12,15 18,9"></polyline>
@@ -99,7 +128,7 @@
         // whole group together - see .tree-branch-children in site.css.
         const inner = document.createElement('div');
         inner.className = 'tree-branch-inner';
-        locations.forEach((loc) => inner.appendChild(buildNode(loc)));
+        locations.forEach((loc) => inner.appendChild(buildNode(loc, query)));
         children.appendChild(inner);
 
         branch.appendChild(header);
@@ -107,18 +136,29 @@
         return branch;
     }
 
-    function renderTree(locations) {
-        if (!locations.length) {
+    function renderTree(locations, query) {
+        if (!allLocations.length) {
             treeEl.innerHTML = '<div class="tree-empty">No locations have been added yet - add some from the admin panel.</div>';
             return;
         }
 
-        const groups = groupByCategory(locations);
+        const visible = query ? locations.filter((loc) => matchesQuery(loc, query)) : locations;
+
+        if (!visible.length) {
+            treeEl.innerHTML = `<div class="tree-empty">No place matches "${escapeHtml(query)}" - try a different name or room number.</div>`;
+            return;
+        }
+
+        const groups = groupByCategory(visible);
         treeEl.innerHTML = '';
 
+        // While actively searching, expand every branch that has a match
+        // so results are visible right away - otherwise only the first
+        // category opens by default (the plain-browsing behaviour).
         let isFirst = true;
         groups.forEach((locs, category) => {
-            treeEl.appendChild(buildBranch(category, locs, isFirst));
+            const isOpen = query ? true : isFirst;
+            treeEl.appendChild(buildBranch(category, locs, isOpen, query));
             isFirst = false;
         });
     }
@@ -127,11 +167,21 @@
         try {
             const res = await fetch('/api/locations');
             if (!res.ok) throw new Error('Request failed: ' + res.status);
-            renderTree(await res.json());
+            allLocations = await res.json();
+            renderTree(allLocations, '');
         } catch (err) {
             treeEl.innerHTML = '<div class="tree-empty">Could not load locations. Please refresh the page.</div>';
             console.error(err);
         }
+    }
+
+    if (searchBox) {
+        let debounceTimer = null;
+        searchBox.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const query = searchBox.value.trim();
+            debounceTimer = setTimeout(() => renderTree(allLocations, query), 150);
+        });
     }
 
     loadTree();

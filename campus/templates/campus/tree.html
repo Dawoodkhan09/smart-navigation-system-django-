@@ -19,6 +19,16 @@
         </a>
     </div>
 
+    <div class="search-wrap tree-search-wrap">
+        <div class="search-input-group">
+            <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="6"></circle>
+                <line x1="20" y1="20" x2="15.8" y2="15.8"></line>
+            </svg>
+            <input type="text" id="treeSearchBox" class="search-input" placeholder="Search a building, room number, or place… (e.g. Library, Classroom 202)" autocomplete="off" />
+        </div>
+    </div>
+
     <div id="locationTree" class="location-tree" data-map-url="{% url 'map' %}">
         <div class="tree-loading">Loading locations…</div>
     </div>
