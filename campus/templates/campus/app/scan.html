@@ -1,0 +1,51 @@
+{% extends "campus/app/base_app.html" %}
+{% load static %}
+
+{% block title %}Scan — Campus Guide{% endblock %}
+
+{% block content %}
+<div class="scan-page">
+    <div class="scan-top-bar">
+        <button id="scanBackBtn" class="scan-icon-btn" type="button" aria-label="Back to map"><span data-icon="close"></span></button>
+        <button id="scanTorchBtn" class="scan-icon-btn" type="button" aria-label="Toggle flashlight" hidden><span data-icon="torch"></span></button>
+    </div>
+
+    <div id="scanReader"></div>
+
+    <div class="scan-overlay">
+        <div class="scan-cutout">
+            <span class="scan-corner scan-corner-tl"></span>
+            <span class="scan-corner scan-corner-tr"></span>
+            <span class="scan-corner scan-corner-bl"></span>
+            <span class="scan-corner scan-corner-br"></span>
+            <span class="scan-line"></span>
+        </div>
+    </div>
+
+    <p id="scanHelp" class="scan-help">Point at the QR sticker on any campus building.</p>
+
+    <div class="scan-manual-entry">
+        <button id="manualEntryLink" type="button">Enter code manually instead</button>
+    </div>
+
+    <div id="scanSuccess" class="scan-success-overlay" hidden>
+        <div class="scan-success-badge"><span data-icon="check"></span></div>
+        <p>Got it — opening the map…</p>
+    </div>
+
+    <div id="scanFallback" class="scan-fallback" hidden>
+        <span data-icon="keyboard" style="width:40px;height:40px;color:var(--ink-2);"></span>
+        <h2 style="margin:0;">Enter the code printed under the QR</h2>
+        <p style="color:var(--ink-2);font-size:14px;margin:0;">Camera access isn't available - type the short code instead.</p>
+        <form id="manualEntryForm" style="display:flex;gap:10px;flex-direction:column;align-items:center;width:100%;">
+            <input id="manualEntryInput" type="text" inputmode="text" autocapitalize="off" autocomplete="off" placeholder="e.g. main-gate" aria-label="Location code">
+            <button type="submit" class="btn-primary">Go</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script type="module" src="{% static 'campus/js/app/scan-page.js' %}"></script>
+{% endblock %}

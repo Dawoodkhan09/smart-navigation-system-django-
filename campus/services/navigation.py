@@ -20,6 +20,24 @@ def calculate_route(campus, start_lat: float, start_lon: float, destination_loca
     except Location.DoesNotExist:
         return {'success': False, 'message': 'Destination not found.'}
 
+    return _calculate_route_to_destination(campus, start_lat, start_lon, destination)
+
+
+def calculate_route_between_locations(origin: Location, destination: Location) -> dict:
+    """
+    Visitor-app entry point (api_views v2 /api/v2/route/): both ends are
+    known Locations - e.g. resolved from their public `code` - rather
+    than a live GPS fix, so this starts the walk from the origin
+    Location's own coordinates instead of a start_lat/start_lon pair.
+    Both must belong to the same campus (its graph is what A* runs over).
+    """
+    if origin.campus_id != destination.campus_id:
+        return {'success': False, 'message': 'Origin and destination are on different campuses.'}
+
+    return _calculate_route_to_destination(origin.campus, origin.latitude, origin.longitude, destination)
+
+
+def _calculate_route_to_destination(campus, start_lat: float, start_lon: float, destination: Location) -> dict:
     # Scoped to this campus only - otherwise "nearest node" could pick a
     # node from a different campus, and A* could wander into a graph that
     # has nothing to do with where the user actually is.

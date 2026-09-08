@@ -1,0 +1,71 @@
+{% extends "campus/app/base_app.html" %}
+{% load static %}
+
+{% block title %}Campus Guide{% endblock %}
+
+{% block content %}
+<div id="app-shell">
+    <div id="offlineBanner" class="offline-banner" hidden>
+        <span data-icon="wifiOff"></span> You're offline - showing cached places.
+    </div>
+
+    {# Everything behind the sheet - made inert while the sheet is at its
+       "full" snap point (see app.js), so Tab/VoiceOver focus can't reach
+       a map marker hidden underneath it. #}
+    <div id="behindSheet">
+        <div id="map" role="application" aria-label="Campus map"></div>
+
+        <header class="top-bar">
+            <div class="search-pill">
+                <span data-icon="search"></span>
+                <input id="searchInput" type="search" placeholder="Search campus…" aria-label="Search campus locations" autocomplete="off">
+            </div>
+            <button id="scanButton" class="scan-fab" aria-label="Scan a QR code" type="button">
+                <span data-icon="scan"></span>
+            </button>
+        </header>
+
+        <span id="statusBadge" class="status-badge pill"></span>
+
+        <nav id="categoryChips" class="chip-row" aria-label="Filter by category"></nav>
+
+        <div class="fab-stack">
+            <button id="locateFab" class="fab" aria-label="Center on my location" type="button"><span data-icon="locate"></span></button>
+            <button id="themeFab" class="fab" aria-label="Toggle dark mode" type="button"><span data-icon="moon"></span></button>
+        </div>
+    </div>
+
+    <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+    <div id="routeLiveRegion" class="sr-only" aria-live="polite"></div>
+
+    <section id="sheet" class="sheet" data-snap="half" role="dialog" aria-label="Campus places">
+        <div class="sheet-handle-area" data-sheet-drag>
+            <div class="sheet-handle"></div>
+        </div>
+        <div id="sheetContent" class="sheet-content" data-sheet-drag></div>
+    </section>
+</div>
+
+<script>
+    // Plain string literals are safe here (no manual escaping needed
+    // beyond |escapejs): codes/slugs only ever contain [a-z0-9-] - see
+    // Location.code / Tour.slug, both SlugFields.
+    window.APP_CONFIG = {
+        campusSlug: "{{ campus.slug|escapejs }}",
+        campusCenter: { lat: {{ campus.center_latitude }}, lng: {{ campus.center_longitude }} },
+        defaultZoom: {{ campus.default_zoom }},
+        atCode: "{{ at_code|escapejs }}",
+        tourSlug: "{{ tour_slug|escapejs }}",
+        // Whether this page load actually came from a scan/link
+        // (?campus= or ?at=), vs. a bare /app/ visit that just landed on
+        // resolve_default_campus()'s fallback - see app.js's
+        // resolveActiveCampusOrRedirect().
+        explicitCampus: {{ explicit_campus|yesno:"true,false" }},
+        unknownCode: new URLSearchParams(window.location.search).get('unknown') || '',
+    };
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% static 'campus/js/app/app.js' %}"></script>
+{% endblock %}

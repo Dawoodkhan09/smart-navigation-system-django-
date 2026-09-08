@@ -35,7 +35,7 @@ ALLOWED_HOSTS = [
     'dawood09.pythonanywhere.com',
     '127.0.0.1',
     'localhost',
-]
+] + [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()]
 
 # Needed by Django's CSRF checks for HTTPS deployments (e.g.
 # "https://yourusername.pythonanywhere.com").
@@ -134,6 +134,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'  # collectstatic output for production hosting
 
+# User-uploaded media (Location photos, Tour cover images). Served by
+# Django itself only in DEBUG (see campus_navigation/urls.py) - a real
+# deployment (e.g. PythonAnywhere) should map /media/ to this folder the
+# same way it already maps /static/.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -150,3 +157,13 @@ CAMPUS_MAP_CENTER_LNG = float(os.environ.get('CAMPUS_MAP_CENTER_LNG', 67.1720))
 CAMPUS_DEFAULT_ZOOM = int(os.environ.get('CAMPUS_DEFAULT_ZOOM', 17))
 CAMPUS_WALKING_SPEED_M_PER_MIN = float(os.environ.get('CAMPUS_WALKING_SPEED_M_PER_MIN', 80))
 CAMPUS_DEFAULT_GEOFENCE_RADIUS = float(os.environ.get('CAMPUS_DEFAULT_GEOFENCE_RADIUS', 50))
+
+# Android TWA (Trusted Web Activity) verification, served at
+# /.well-known/assetlinks.json (see campus_navigation/urls.py). Filled in
+# after packaging the Android app with PWABuilder (pwabuilder.com), which
+# gives you the package name + SHA256 signing fingerprint - see README's
+# "Android app (PWABuilder)" section. Left blank, the site just serves an
+# empty assetlinks.json (harmless - the APK still works, just shows a
+# Chrome address bar instead of looking fully native).
+ANDROID_PACKAGE_NAME = os.environ.get('ANDROID_PACKAGE_NAME', '')
+ANDROID_SHA256_FINGERPRINT = os.environ.get('ANDROID_SHA256_FINGERPRINT', '')

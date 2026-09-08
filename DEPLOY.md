@@ -84,14 +84,29 @@ python -c "import secrets; print(secrets.token_urlsafe(50))"
 On the **Web** tab:
 
 - **Virtualenv**: `/home/<yourusername>/campus-navigation-django/venv`
-- **Static files** table: add an entry
+- **Static files** table: add two entries
   - URL: `/static/`
   - Directory: `/home/<yourusername>/campus-navigation-django/staticfiles`
+  - URL: `/media/`
+  - Directory: `/home/<yourusername>/campus-navigation-django/media`
+    (uploaded Location photos / Tour cover images - Django only serves
+    these itself when `DJANGO_DEBUG=True`, so production needs this
+    mapping the same way `/static/` does)
 
 ## 7. Reload
 
 Click the green **Reload** button on the Web tab. Your app is live at
 `https://<yourusername>.pythonanywhere.com/`, admin at `/admin/`.
+
+## 8. Print the QR stickers from this same domain
+
+A QR code's PNG bakes in a full URL (`https://<host>/l/<code>/`) at the
+moment you generate it — see `campus/services/qr.py`. Generate/download
+and print the sticker sheet (Admin → Locations → select rows → "Print QR
+sheet for selected locations") **from this production URL**, not from
+`localhost` or a dev tunnel, or the printed codes will point at the
+wrong host. If you ever move to a custom domain later, reprint every
+sticker from the new domain.
 
 ## Updating later
 

@@ -22,7 +22,7 @@ Two things still need attention after this runs:
 
 from django.core.management.base import BaseCommand
 
-from campus.models import BoundaryPoint, Campus, GraphEdge, GraphNode, Location
+from campus.models import BoundaryPoint, Campus, GraphEdge, GraphNode, Location, Tour, TourStop
 from campus.services import haversine
 
 # Matches the Campus row campus/migrations/0003_backfill_campus.py creates
@@ -39,23 +39,23 @@ DEFAULT_CAMPUS = {
 }
 
 LOCATIONS = [
-    {'name': 'Main Gate', 'description': 'Main entrance of the campus.', 'latitude': 24.88534020573535, 'longitude': 67.17154097985589, 'category': 'Entrance', 'geofence_radius': 30},
-    {'name': 'Garden Area', 'description': 'Campus garden.', 'latitude': 24.88547268503638, 'longitude': 67.1717913321266, 'category': 'Facility', 'geofence_radius': 30},
-    {'name': 'Masjid', 'description': 'Campus mosque.', 'latitude': 24.88583533822713, 'longitude': 67.17164741544522, 'category': 'Facility', 'geofence_radius': 30},
-    {'name': 'Building A', 'description': "Ground floor: CS HOD office, Faculty room 2, Faculty room 3, Faculty room 4, Faculty room 5, Media HOD room, Director room, Admission office.\n1st floor: IT room, Examination department, C-Lab 1, C-Lab 2, Classroom 202, Classroom 203, Medio studio, Music room.", 'latitude': 24.885819462357194, 'longitude': 67.17196461865626, 'category': 'Academic', 'geofence_radius': 45},
-    {'name': 'CCTV Room', 'description': 'Campus CCTV monitoring room.', 'latitude': 24.88595153736792, 'longitude': 67.17188378699797, 'category': 'Admin', 'geofence_radius': 20},
-    {'name': 'Old Cafeteria', 'description': 'Old cafeteria.', 'latitude': 24.88596128871092, 'longitude': 67.17172559423251, 'category': 'Food', 'geofence_radius': 30},
-    {'name': 'Student Council', 'description': 'Student council office.', 'latitude': 24.885652243199527, 'longitude': 67.17222156465198, 'category': 'Admin', 'geofence_radius': 25},
-    {'name': 'Fees Affairs', 'description': 'Fees affairs office.', 'latitude': 24.88578186369185, 'longitude': 67.17206226904662, 'category': 'Admin', 'geofence_radius': 20},
-    {'name': 'Finance Room', 'description': 'Finance room.', 'latitude': 24.88582237315094, 'longitude': 67.17206545874853, 'category': 'Admin', 'geofence_radius': 20},
-    {'name': 'Building 2', 'description': 'Rooms 102-105, Sports room, male washroom, staff male washroom.', 'latitude': 24.886108832521774, 'longitude': 67.17211489912728, 'category': 'Academic', 'geofence_radius': 35},
+    {'name': 'Main Gate', 'description': 'Main entrance of the campus.', 'latitude': 24.88534020573535, 'longitude': 67.17154097985589, 'category': 'Entrance', 'geofence_radius': 30, 'short_description': 'The main entrance to campus - start here.'},
+    {'name': 'Garden Area', 'description': 'Campus garden.', 'latitude': 24.88547268503638, 'longitude': 67.1717913321266, 'category': 'Facility', 'geofence_radius': 30, 'short_description': 'A green sit-down spot just past the main gate.'},
+    {'name': 'Masjid', 'description': 'Campus mosque.', 'latitude': 24.88583533822713, 'longitude': 67.17164741544522, 'category': 'Facility', 'geofence_radius': 30, 'short_description': 'Campus mosque.'},
+    {'name': 'Building A', 'description': "Ground floor: CS HOD office, Faculty room 2, Faculty room 3, Faculty room 4, Faculty room 5, Media HOD room, Director room, Admission office.\n1st floor: IT room, Examination department, C-Lab 1, C-Lab 2, Classroom 202, Classroom 203, Medio studio, Music room.", 'latitude': 24.885819462357194, 'longitude': 67.17196461865626, 'category': 'Academic', 'geofence_radius': 45, 'short_description': 'Faculty offices, admissions, IT room and computer labs.'},
+    {'name': 'CCTV Room', 'description': 'Campus CCTV monitoring room.', 'latitude': 24.88595153736792, 'longitude': 67.17188378699797, 'category': 'Admin', 'geofence_radius': 20, 'short_description': 'Campus security and CCTV monitoring.'},
+    {'name': 'Old Cafeteria', 'description': 'Old cafeteria.', 'latitude': 24.88596128871092, 'longitude': 67.17172559423251, 'category': 'Food', 'geofence_radius': 30, 'short_description': 'The original campus cafeteria.'},
+    {'name': 'Student Council', 'description': 'Student council office.', 'latitude': 24.885652243199527, 'longitude': 67.17222156465198, 'category': 'Admin', 'geofence_radius': 25, 'short_description': 'Student council office.'},
+    {'name': 'Fees Affairs', 'description': 'Fees affairs office.', 'latitude': 24.88578186369185, 'longitude': 67.17206226904662, 'category': 'Admin', 'geofence_radius': 20, 'short_description': 'Pay or ask about fees here.'},
+    {'name': 'Finance Room', 'description': 'Finance room.', 'latitude': 24.88582237315094, 'longitude': 67.17206545874853, 'category': 'Admin', 'geofence_radius': 20, 'short_description': 'Campus finance office.'},
+    {'name': 'Building 2', 'description': 'Rooms 102-105, Sports room, male washroom, staff male washroom.', 'latitude': 24.886108832521774, 'longitude': 67.17211489912728, 'category': 'Academic', 'geofence_radius': 35, 'short_description': 'Classrooms 102-105 and the sports room.'},
     # Building 3 (admin room 106-8 + C-lab 03) - coordinates not provided, add manually.
-    {'name': 'Futsal Ground', 'description': 'Futsal ground.', 'latitude': 24.886344212633542, 'longitude': 67.17214232184021, 'category': 'Facility', 'geofence_radius': 30},
-    {'name': 'Building 4', 'description': 'Classrooms 301-306.', 'latitude': 24.88659175919714, 'longitude': 67.17202037359395, 'category': 'Academic', 'geofence_radius': 40},
+    {'name': 'Futsal Ground', 'description': 'Futsal ground.', 'latitude': 24.886344212633542, 'longitude': 67.17214232184021, 'category': 'Sports', 'geofence_radius': 30, 'short_description': 'Outdoor futsal ground.'},
+    {'name': 'Building 4', 'description': 'Classrooms 301-306.', 'latitude': 24.88659175919714, 'longitude': 67.17202037359395, 'category': 'Academic', 'geofence_radius': 40, 'short_description': 'Classrooms 301-306.'},
     # Building 5 (ground floor AC 109 + first floor C-lab 4) - coordinates not provided, add manually.
-    {'name': 'Cafeteria', 'description': 'Cafeteria.', 'latitude': 24.886885450548654, 'longitude': 67.17207938307956, 'category': 'Food', 'geofence_radius': 35},
-    {'name': 'Car Parking', 'description': 'Car parking.', 'latitude': 24.88671618024905, 'longitude': 67.17221813511325, 'category': 'Facility', 'geofence_radius': 40},
-    {'name': 'Library', 'description': 'Library.', 'latitude': 24.8865201, 'longitude': 67.1722113, 'category': 'Academic', 'geofence_radius': 40},
+    {'name': 'Cafeteria', 'description': 'Cafeteria.', 'latitude': 24.886885450548654, 'longitude': 67.17207938307956, 'category': 'Food', 'geofence_radius': 35, 'short_description': 'The current campus cafeteria.'},
+    {'name': 'Car Parking', 'description': 'Car parking.', 'latitude': 24.88671618024905, 'longitude': 67.17221813511325, 'category': 'Parking', 'geofence_radius': 40, 'short_description': 'Campus car park.'},
+    {'name': 'Library', 'description': 'Library.', 'latitude': 24.8865201, 'longitude': 67.1722113, 'category': 'Academic', 'geofence_radius': 40, 'short_description': 'Study hall and book collection.'},
 ]
 
 # Best-guess walkway connections (see module doc comment above).
@@ -102,6 +102,13 @@ BOUNDARY = [
 ]
 
 
+# The visitor-app "First-Day Campus Walk" tour: entrance -> admin ->
+# library -> academic block -> cafeteria -> sports ground, using the
+# closest matching seeded location for each stop.
+TOUR_SLUG = 'first-day-campus-walk'
+TOUR_STOPS = ['Main Gate', 'Student Council', 'Library', 'Building A', 'Cafeteria', 'Futsal Ground']
+
+
 class Command(BaseCommand):
     help = 'Seeds the real campus locations, walkway graph and boundary polygon (no-op if already seeded).'
 
@@ -111,9 +118,18 @@ class Command(BaseCommand):
         )
 
         if Location.objects.filter(campus=campus).exists() or GraphNode.objects.filter(campus=campus).exists():
-            self.stdout.write(self.style.WARNING(f'{campus.name} is already seeded - skipping.'))
-            return
+            self.stdout.write(self.style.WARNING(f'{campus.name} is already seeded - skipping location/graph/boundary seed.'))
+            # Second, idempotent pass: a DB seeded before the visitor-app
+            # fields existed still needs category/short_description
+            # backfilled onto its rows, so this always runs (safe to
+            # re-run any number of times - it only touches blank fields).
+            self._backfill_visitor_metadata(campus)
+        else:
+            self._seed_full(campus)
 
+        self._seed_tour(campus)
+
+    def _seed_full(self, campus):
         nodes_by_name = {}
 
         for loc in LOCATIONS:
@@ -144,3 +160,58 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'Seeded {campus.name}: {len(LOCATIONS)} locations, {len(EDGES)} edges, {len(BOUNDARY)} boundary points.'
         ))
+
+    def _backfill_visitor_metadata(self, campus):
+        """
+        Fills in short_description/category on Locations that already
+        existed before these visitor-app fields did. `code` isn't handled
+        here - Location.save() (see models.py) always assigns one itself
+        the moment a blank one is saved, so it's covered for free below.
+        """
+        updated = 0
+
+        for loc_data in LOCATIONS:
+            location = Location.objects.filter(campus=campus, name=loc_data['name']).first()
+            if not location:
+                continue
+
+            dirty = False
+            if not location.short_description and loc_data.get('short_description'):
+                location.short_description = loc_data['short_description']
+                dirty = True
+            if location.category == 'General' and loc_data.get('category'):
+                location.category = loc_data['category']
+                dirty = True
+
+            if dirty or not location.code:
+                location.save()
+                updated += 1
+
+        if updated:
+            self.stdout.write(self.style.SUCCESS(f'Backfilled visitor-app metadata on {updated} existing location(s).'))
+
+    def _seed_tour(self, campus):
+        """Idempotent: safe to run every time via update_or_create."""
+        tour, _ = Tour.objects.update_or_create(
+            slug=TOUR_SLUG,
+            defaults={
+                'title': 'First-Day Campus Walk',
+                'summary': 'A quick orientation loop past the gate, student council, the library, an academic block, the cafeteria and the sports ground.',
+                'duration_minutes': 20,
+                'is_published': True,
+                'order': 1,
+            },
+        )
+
+        stops_created = 0
+        for order, name in enumerate(TOUR_STOPS, start=1):
+            location = Location.objects.filter(campus=campus, name=name).first()
+            if not location:
+                continue
+            _, created = TourStop.objects.update_or_create(
+                tour=tour, order=order,
+                defaults={'location': location},
+            )
+            stops_created += 1
+
+        self.stdout.write(self.style.SUCCESS(f'Seeded tour "{tour.title}" with {stops_created} stop(s).'))

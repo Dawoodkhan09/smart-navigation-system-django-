@@ -1,0 +1,118 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: #f4f4f4;
+            color: #111;
+        }
+        .toolbar {
+            max-width: 900px;
+            margin: 0 auto 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .toolbar button {
+            font-size: 14px;
+            padding: 8px 18px;
+            border-radius: 6px;
+            border: 1px solid #0f6d4c;
+            background: #0f6d4c;
+            color: #fff;
+            cursor: pointer;
+        }
+        .sheet {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 12mm;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: min-content;
+            gap: 6mm;
+            box-shadow: 0 1px 4px rgba(0,0,0,.15);
+        }
+        .cell {
+            border: 1px dashed #bbb;
+            border-radius: 6px;
+            padding: 6mm 4mm;
+            text-align: center;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .cell img.qr {
+            width: 100%;
+            max-width: 42mm;
+            height: auto;
+        }
+        .cell .logo-slot {
+            font-size: 9px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 4px;
+        }
+        .cell .name {
+            font-weight: 700;
+            font-size: 13px;
+            margin-top: 6px;
+            line-height: 1.25;
+        }
+        .cell .category {
+            font-size: 10px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-top: 2px;
+        }
+        .empty {
+            padding: 40px;
+            text-align: center;
+            color: #777;
+        }
+
+        @media print {
+            body { background: #fff; padding: 0; }
+            .toolbar { display: none; }
+            .sheet {
+                box-shadow: none;
+                padding: 8mm;
+                gap: 6mm;
+            }
+            .cell { border: 1px solid #ccc; }
+            @page { size: A4; margin: 10mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <strong>{{ title }} &mdash; {{ cells|length }} code{{ cells|length|pluralize }}</strong>
+        <button type="button" onclick="window.print()">Print</button>
+    </div>
+
+    {% if cells %}
+    <div class="sheet">
+        {% for cell in cells %}
+        <div class="cell">
+            <div class="logo-slot">{{ cell.location.campus.name }}</div>
+            <img class="qr" src="{{ cell.qr_url }}" alt="QR code for {{ cell.location.name }}">
+            <div class="name">{{ cell.location.name }}</div>
+            <div class="category">{{ cell.location.category }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="sheet">
+        <div class="empty" style="grid-column: 1 / -1;">No locations selected. Go back to the Location list, select some rows, and choose &ldquo;Print QR sheet for selected locations&rdquo; from the Action dropdown.</div>
+    </div>
+    {% endif %}
+</body>
+</html>

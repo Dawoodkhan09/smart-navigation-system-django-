@@ -8,13 +8,13 @@ routing never crosses into another campus's data.
 
 import json
 
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import BoundaryPoint, Campus, Location
-from .services import navigation
+from .models import BoundaryPoint, Campus, Location, ScanEvent, Tour
+from .services import directions, geometry, navigation
 
 
 def _location_dto(location: Location) -> dict:
@@ -97,3 +97,267 @@ def campus_boundary(request, campus_slug):
     return JsonResponse(
         [{'latitude': p.latitude, 'longitude': p.longitude} for p in points], safe=False
     )
+
+
+# =============================================================================
+# API v2 - the visitor app (QR scan -> live map guide).
+#
+# Unlike the v1 endpoints above, none of these take a <campus_slug> in the
+# URL: `code` is globally unique across every campus (see Location.code in
+# models.py), so a single /l/<code>/ or /api/v2/locations/<code>/ can
+# resolve a place without knowing which campus it's on first. Endpoints
+# that aren't about one specific Location (locations list, nearby, tours,
+# boundary) instead take an optional ?campus=<slug> query param, falling
+# back to the first Campus - today's de facto "the campus" until the
+# visitor app grows its own campus picker.
+# =============================================================================
+
+
+def resolve_default_campus(request):
+    slug = request.GET.get('campus')
+    if slug:
+        return get_object_or_404(Campus, slug=slug)
+    campus = Campus.objects.first()
+    if campus is None:
+        raise Http404('No campus has been configured yet.')
+    return campus
+
+
+def _v2_location_dto(location: Location, request) -> dict:
+    return {
+        'id': location.id,
+        'code': location.code,
+        'name': location.name,
+        'category': location.category,
+        'lat': location.latitude,
+        'lng': location.longitude,
+        'shortDescription': location.short_description,
+        'photoUrl': request.build_absolute_uri(location.photo.url) if location.photo else None,
+        'isOpenNow': location.is_open_now,
+        'floorCount': location.floor_count,
+    }
+
+
+def _v2_location_detail_dto(location: Location, request) -> dict:
+    dto = _v2_location_dto(location, request)
+    dto.update({
+        'description': location.description,
+        'geofenceRadius': location.geofence_radius,
+        'isScannable': location.is_scannable,
+        'campus': location.campus.slug,
+        'nearby': _nearby_dtos(location.campus, request, exclude_id=location.id, lat=location.latitude, lng=location.longitude, limit=4),
+    })
+    return dto
+
+
+def _nearby_dtos(campus, request, *, lat: float, lng: float, limit: int, exclude_id=None) -> list:
+    from .services import haversine
+
+    queryset = Location.objects.filter(campus=campus, is_published=True)
+    if exclude_id is not None:
+        queryset = queryset.exclude(pk=exclude_id)
+
+    with_distance = sorted(
+        (
+            (haversine.distance_meters(lat, lng, loc.latitude, loc.longitude), loc)
+            for loc in queryset
+        ),
+        key=lambda pair: pair[0],
+    )[:limit]
+
+    results = []
+    for distance_m, loc in with_distance:
+        dto = _v2_location_dto(loc, request)
+        dto['distanceM'] = round(distance_m, 1)
+        results.append(dto)
+    return results
+
+
+@require_GET
+def v2_location_list(request):
+    campus = resolve_default_campus(request)
+    category = request.GET.get('category', '').strip()
+    q = request.GET.get('q', '').strip()
+
+    queryset = Location.objects.filter(campus=campus, is_published=True)
+    if category:
+        queryset = queryset.filter(category__iexact=category)
+    if q:
+        from django.db.models import Q
+        queryset = queryset.filter(
+            Q(name__icontains=q) | Q(short_description__icontains=q) | Q(description__icontains=q) | Q(category__icontains=q)
+        )
+
+    locations = queryset.order_by('name')
+    return JsonResponse([_v2_location_dto(loc, request) for loc in locations], safe=False)
+
+
+@require_GET
+def v2_location_detail(request, code):
+    location = get_object_or_404(Location, code=code, is_published=True)
+    return JsonResponse(_v2_location_detail_dto(location, request))
+
+
+@require_GET
+def v2_route(request):
+    """
+    GET /api/v2/route/?from=<code>&to=<code>  - origin is a known Location
+        (e.g. wherever the visitor scanned in from).
+    GET /api/v2/route/?from_lat=&from_lng=&to=<code>  - origin is a raw
+        GPS fix instead, which won't line up with any Location's own
+        coordinates. This extends the spec's from/to-code-only contract
+        (see PROJECT_BRIEF_FOR_CLAUDE.md discussion) because "Directions"
+        can also start from the visitor's live position, not just a
+        scanned place - reuses navigation.calculate_route exactly as the
+        v1 map already does for a GPS start, no new pathfinding code.
+    """
+    to_code = request.GET.get('to', '').strip()
+    from_code = request.GET.get('from', '').strip()
+    from_lat = request.GET.get('from_lat')
+    from_lng = request.GET.get('from_lng')
+
+    if not to_code:
+        return JsonResponse({'error': 'missing_params', 'message': '"to" query param is required.'}, status=400)
+
+    try:
+        destination = Location.objects.get(code=to_code)
+    except Location.DoesNotExist:
+        return JsonResponse({'error': 'unknown_code'}, status=404)
+
+    if from_code:
+        try:
+            origin = Location.objects.get(code=from_code)
+        except Location.DoesNotExist:
+            return JsonResponse({'error': 'unknown_code'}, status=404)
+        result = navigation.calculate_route_between_locations(origin, destination)
+        origin_name = origin.name
+    elif from_lat is not None and from_lng is not None:
+        try:
+            lat, lng = float(from_lat), float(from_lng)
+        except ValueError:
+            return JsonResponse({'error': 'invalid_params', 'message': '"from_lat"/"from_lng" must be numbers.'}, status=400)
+        result = navigation.calculate_route(destination.campus, lat, lng, destination.id)
+        origin_name = 'Your location'
+    else:
+        return JsonResponse({'error': 'missing_params', 'message': 'Provide "from" (a location code) or "from_lat"/"from_lng".'}, status=400)
+
+    if not result['success']:
+        return JsonResponse({'error': 'no_route', 'message': result['message']}, status=404)
+
+    path = result['path']
+    return JsonResponse({
+        'origin_name': origin_name,
+        'distance_m': result['totalDistanceMeters'],
+        'duration_min': result['estimatedWalkingMinutes'],
+        # `code` is null for every node here: these are graph walkway
+        # nodes (GraphNode), not Locations, so they don't have a public
+        # QR code of their own - only the origin/destination do, and the
+        # caller already has those (the from/to query params).
+        'path': [{'lat': n['latitude'], 'lng': n['longitude'], 'name': n['name'], 'code': None} for n in path],
+        'steps': directions.steps_from_path(path),
+    })
+
+
+@require_GET
+def v2_nearby(request):
+    campus = resolve_default_campus(request)
+
+    try:
+        lat = float(request.GET['lat'])
+        lng = float(request.GET['lng'])
+    except (KeyError, TypeError, ValueError):
+        return JsonResponse({'error': 'invalid_params', 'message': '"lat" and "lng" query params are required.'}, status=400)
+
+    try:
+        limit = int(request.GET.get('limit', 5))
+    except ValueError:
+        limit = 5
+    limit = max(1, min(limit, 50))
+
+    return JsonResponse(_nearby_dtos(campus, request, lat=lat, lng=lng, limit=limit), safe=False)
+
+
+@require_POST
+def v2_scan(request):
+    """
+    POST {"code": "main-gate"} (or a full /l/<code>/ URL - the last path
+    segment is used). CSRF-protected: the visitor-app page sends the
+    standard X-CSRFToken header (see static/campus/js/api.js), unlike the
+    v1 navigation_route endpoint which predates that being wired up.
+    """
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'invalid_body'}, status=400)
+
+    raw_code = str(data.get('code', '')).strip()
+    code = raw_code.rstrip('/').rsplit('/', 1)[-1] if raw_code else ''
+
+    location = Location.objects.filter(code=code, is_published=True).first() if code else None
+
+    ScanEvent.objects.create(
+        location=location,
+        code_raw=raw_code,
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:300],
+        session_key=request.session.session_key or '',
+    )
+
+    if not location:
+        return JsonResponse({'error': 'unknown_code'}, status=404)
+
+    return JsonResponse(_v2_location_detail_dto(location, request))
+
+
+@require_GET
+def v2_boundary(request):
+    campus = resolve_default_campus(request)
+    points = list(BoundaryPoint.objects.filter(campus=campus).order_by('sequence_order'))
+    point_dicts = [{'latitude': p.latitude, 'longitude': p.longitude} for p in points]
+
+    inside = None
+    lat = request.GET.get('lat')
+    lng = request.GET.get('lng')
+    if lat is not None and lng is not None:
+        try:
+            inside = geometry.point_in_polygon(float(lat), float(lng), point_dicts)
+        except ValueError:
+            inside = None
+
+    return JsonResponse({
+        'points': [{'lat': p['latitude'], 'lng': p['longitude']} for p in point_dicts],
+        'inside': inside,
+    })
+
+
+def _v2_tour_summary_dto(tour: Tour, request) -> dict:
+    return {
+        'slug': tour.slug,
+        'title': tour.title,
+        'summary': tour.summary,
+        'durationMinutes': tour.duration_minutes,
+        'stopCount': tour.stops.count(),
+        'coverImageUrl': request.build_absolute_uri(tour.cover_image.url) if tour.cover_image else None,
+    }
+
+
+@require_GET
+def v2_tour_list(request):
+    tours = Tour.objects.filter(is_published=True)
+    return JsonResponse([_v2_tour_summary_dto(t, request) for t in tours], safe=False)
+
+
+@require_GET
+def v2_tour_detail(request, slug):
+    tour = get_object_or_404(Tour, slug=slug, is_published=True)
+    stops = tour.stops.select_related('location').order_by('order')
+
+    dto = _v2_tour_summary_dto(tour, request)
+    dto['stops'] = [
+        {
+            'order': stop.order,
+            'note': stop.note,
+            'location': _v2_location_dto(stop.location, request),
+        }
+        for stop in stops
+    ]
+    return JsonResponse(dto)

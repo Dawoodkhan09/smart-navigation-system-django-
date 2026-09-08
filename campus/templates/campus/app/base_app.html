@@ -1,0 +1,39 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+    <title>{% block title %}Campus Guide{% endblock %}</title>
+    <meta name="theme-color" content="#0E7C66">
+    <meta name="description" content="Scan a campus QR code and get walking directions.">
+
+    <link rel="manifest" href="{% url 'pwa-manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'campus/img/icon-192.png' %}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Campus">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="{% static 'campus/css/app.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {# Renders a hidden csrf input, but more importantly makes Django set
+       the csrftoken cookie on this response - api.js reads that cookie
+       for the X-CSRFToken header on POSTs (see store.getCsrfToken()). #}
+    <form hidden>{% csrf_token %}</form>
+
+    {% block content %}{% endblock %}
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    {% block extra_scripts %}{% endblock %}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>
