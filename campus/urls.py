@@ -15,17 +15,10 @@ urlpatterns = [
     path('c/<slug:campus_slug>/api/navigation/route', api_views.navigation_route, name='api-navigation-route'),
     path('c/<slug:campus_slug>/api/campus-boundary', api_views.campus_boundary, name='api-campus-boundary'),
 
-    # A campus's own QR code (Admin -> Campuses -> QR preview) - scanning
-    # it is how the visitor app's very first launch picks which campus to
-    # load. Kept under the same c/<slug>/ prefix as the v1 routes above,
-    # since it's genuinely campus-scoped, unlike the /app/... routes below.
-    path('c/<slug:campus_slug>/app/', views.campus_qr_landing, name='campus-qr-landing'),
-
-    # --- Visitor app (QR scan -> live map guide). Not campus-scoped in
-    # the URL: `Location.code` is globally unique, and these pages/
-    # endpoints take an optional ?campus=<slug> instead (see
-    # api_views.resolve_default_campus), falling back to the first Campus
-    # only when nothing else says otherwise. ---
+    # --- Visitor app (QR scan -> live map guide). No <campus_slug> here:
+    # `Location.code` is globally unique, and these pages/endpoints
+    # otherwise default to the first Campus (see api_views.resolve_default_campus)
+    # until the visitor app grows its own campus picker. ---
     path('app/', views.app_shell, name='app-shell'),
     path('app/scan/', views.app_scan, name='app-scan'),
     path('app/tour/<slug:slug>/', views.app_tour, name='app-tour'),

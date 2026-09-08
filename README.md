@@ -22,34 +22,14 @@ built-in admin replacing the original's hand-rolled `/admin/*` CRUD.
 
 A second, mobile-first surface at **`/app/`**, separate from the
 Bootstrap map/admin above (own base template, own `app.css`, no
-Bootstrap). A visitor scans a QR sticker with their phone's stock camera
-→ lands in a polished map experience already centered on the right place,
-with a bottom sheet for browsing, directions, and a guided tour mode.
-
-**Two kinds of QR code, both scannable from the very first launch:**
-
-- **Campus QR** (Admin → Campuses → open one → QR preview) - encodes
-  `/c/<slug>/app/`. Since `Location.code` is globally unique but a fresh
-  install genuinely doesn't know which campus it's for yet, `/app/` on a
-  device that has never scanned anything redirects straight to
-  `/app/scan/` instead of guessing - see `static/campus/js/app/app.js`'s
-  `resolveActiveCampusOrRedirect()`. Scanning a campus's own QR (or any
-  one of its Locations' QRs, which works just as well since every
-  Location belongs to exactly one campus) is what answers that. The
-  chosen campus is then remembered (`localStorage`) so later visits skip
-  straight to the map.
-- **Location QR** (Admin → Locations → open one → QR preview) - encodes
-  `/l/<code>/`, same as before.
-
-Creating a new Campus in Admin doesn't need a separate step to "generate"
-its QR - `qr_preview` (shared by both admin pages via
-`QrPreviewAdminMixin` in `admin.py`) renders it on demand from the
-campus's own `slug`, same as a Location's QR renders from its `code`.
+Bootstrap). A visitor scans a QR sticker on a building with their
+phone's stock camera → lands on `/l/<code>/` → redirected into `/app/`
+already centered on that place, with a bottom sheet for browsing,
+directions, and a guided tour mode.
 
 - **Pages**: `/app/` (map + sheet), `/app/scan/` (in-app camera
-  scanner - recognises both kinds of QR above), `/app/tour/<slug>/`
-  (guided tour), `/l/<code>/` and `/c/<slug>/app/` (QR landings → the
-  location one records a `ScanEvent` → both redirect into `/app/`).
+  scanner), `/app/tour/<slug>/` (guided tour), `/l/<code>/` (QR
+  landing → records a `ScanEvent` → redirects into `/app/?at=<code>`).
 - **API**: `campus/api_views.py`'s `/api/v2/...` endpoints (locations,
   location detail + nearby, route + turn-by-turn steps, nearby, scan,
   boundary + inside/outside, tours) — all plain `JsonResponse`, no DRF,

@@ -20,78 +20,18 @@ FALLBACK_CENTER_LNG = 67.1720
 FALLBACK_ZOOM = 17
 
 
-class QrPreviewAdminMixin:
-    """
-    Read-only QR preview + download, on any ModelAdmin whose model has a
-    public visitor-app URL to encode. Subclasses set `qr_url_builder` to a
-    campus.services.qr function of (request, obj) -> url, and can
-    override `qr_filename` for the downloaded file's name.
-
-    Shared by CampusAdmin (each campus gets its own QR - scanning it is
-    how the visitor app's very first launch picks which campus to load)
-    and LocationAdmin (each location's QR - see qr_sheet.html for the
-    bulk print flow, Location-only).
-    """
-
-    qr_url_builder = None
-
-    @admin.display(description='QR code')
-    def qr_preview(self, obj):
-        if not obj.pk:
-            return 'Save this first to generate its QR code.'
-
-        png_url = reverse(f'admin:{self._qr_url_name}', args=[obj.pk])
-        return format_html(
-            '<img src="{0}" alt="QR code" '
-            'style="width:160px;height:160px;border:1px solid #ddd;padding:8px;background:#fff;" />'
-            '<div style="margin-top:6px;"><a href="{0}?download=1">Download PNG</a></div>',
-            png_url,
-        )
-
-    @property
-    def _qr_url_name(self):
-        return f'{self.model._meta.app_label}_{self.model._meta.model_name}_qr_png'
-
-    def get_urls(self):
-        custom = [
-            path('<int:object_id>/qr.png', self.admin_site.admin_view(self.qr_png_view), name=self._qr_url_name),
-        ]
-        return custom + super().get_urls()
-
-    def qr_png_view(self, request, object_id):
-        obj = get_object_or_404(self.model, pk=object_id)
-        url = self.qr_url_builder(request, obj)
-        png_bytes = qr.qr_png_bytes(url)
-
-        response = HttpResponse(png_bytes, content_type='image/png')
-        if request.GET.get('download'):
-            response['Content-Disposition'] = f'attachment; filename="{self.qr_filename(obj)}-qr.png"'
-        return response
-
-    def qr_filename(self, obj):
-        return getattr(obj, 'code', None) or getattr(obj, 'slug', None) or obj.pk
-
-
 @admin.register(Campus)
-class CampusAdmin(QrPreviewAdminMixin, admin.ModelAdmin):
+class CampusAdmin(admin.ModelAdmin):
     """
     The tenant model everything else (Location, GraphNode, GraphEdge via
     its nodes, BoundaryPoint) belongs to. Add a campus here first, then
     its Locations/Graph Nodes/Campus Boundary via the other admin pages
     (each of those forms has a Campus dropdown to pick this one).
-
-    Every campus gets its own QR code (qr_preview, from
-    QrPreviewAdminMixin): scanning it is how the visitor app picks which
-    campus to load on a phone's very first launch (see
-    campus.views.campus_qr_landing and static/campus/js/app/app.js's
-    "no campus chosen yet" gate).
     """
 
     prepopulated_fields = {'slug': ('name',)}
     list_display = ('name', 'slug', 'center_latitude', 'center_longitude', 'default_zoom')
     search_fields = ('name', 'slug')
-    readonly_fields = ('qr_preview',)
-    qr_url_builder = staticmethod(qr.build_campus_url)
 
 
 class MapPickerAdminMixin:
@@ -138,14 +78,26 @@ class MapPickerAdminMixin:
 
 
 @admin.register(Location)
-class LocationAdmin(QrPreviewAdminMixin, MapPickerAdminMixin, admin.ModelAdmin):
+class LocationAdmin(MapPickerAdminMixin, admin.ModelAdmin):
     change_form_template = 'admin/campus/location/change_form.html'
     list_display = ('name', 'campus', 'category', 'code', 'is_published', 'is_scannable', 'latitude', 'longitude', 'geofence_radius')
     list_filter = ('campus', 'category', 'is_published', 'is_scannable')
     search_fields = ('name', 'description', 'category', 'code')
     readonly_fields = ('qr_preview',)
     actions = ['print_qr_sheet']
-    qr_url_builder = staticmethod(qr.build_location_url)
+
+    @admin.display(description='QR code')
+    def qr_preview(self, obj):
+        if not obj.pk:
+            return 'Save the location first to generate its QR code.'
+
+        png_url = reverse('admin:campus_location_qr_png', args=[obj.pk])
+        return format_html(
+            '<img src="{0}" alt="QR code for {1}" '
+            'style="width:160px;height:160px;border:1px solid #ddd;padding:8px;background:#fff;" />'
+            '<div style="margin-top:6px;"><a href="{0}?download=1">Download PNG</a></div>',
+            png_url, obj.name,
+        )
 
     @admin.action(description='Print QR sheet for selected locations')
     def print_qr_sheet(self, request, queryset):
@@ -156,9 +108,21 @@ class LocationAdmin(QrPreviewAdminMixin, MapPickerAdminMixin, admin.ModelAdmin):
 
     def get_urls(self):
         custom = [
+            path('<int:object_id>/qr.png', self.admin_site.admin_view(self.qr_png_view), name='campus_location_qr_png'),
             path('print-qr-sheet/', self.admin_site.admin_view(self.print_qr_sheet_view), name='campus_location_print_qr_sheet'),
         ]
         return custom + super().get_urls()
+
+    # GET .../<location_id>/qr.png[?download=1]
+    def qr_png_view(self, request, object_id):
+        location = get_object_or_404(Location, pk=object_id)
+        url = qr.build_location_url(request, location)
+        png_bytes = qr.qr_png_bytes(url)
+
+        response = HttpResponse(png_bytes, content_type='image/png')
+        if request.GET.get('download'):
+            response['Content-Disposition'] = f'attachment; filename="{location.code}-qr.png"'
+        return response
 
     # GET .../print-qr-sheet/?ids=1,2,3 - an A4, print-optimised sheet of
     # QR codes for the selected locations (see the "Print QR sheet for

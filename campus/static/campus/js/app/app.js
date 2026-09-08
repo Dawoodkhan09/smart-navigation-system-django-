@@ -3,14 +3,14 @@
 // campus/templates/campus/app/shell.html. This is the one module that's
 // allowed to know about all the others; everything else stays focused.
 
-import { api, setCampusSlug } from './api.js';
+import { api } from './api.js';
 import { CampusMap } from './map.js';
 import { BottomSheet } from './sheet.js';
 import { GeoTracker } from './geo.js';
 import * as ui from './ui.js';
 import * as routeMod from './route.js';
 import * as tourMod from './tour.js';
-import { getLastScan, setLastScan, getActiveCampus, setActiveCampus, getThemeOverride, setThemeOverride } from './store.js';
+import { getLastScan, setLastScan, getThemeOverride, setThemeOverride } from './store.js';
 import { icon } from './icons.js';
 
 const config = window.APP_CONFIG || {};
@@ -47,49 +47,7 @@ let tourState = null;
 
 init();
 
-/**
- * Which campus this launch of the app is for. Every campus has its own
- * QR code (see Admin -> Campuses); scanning one - or scanning any single
- * Location, which always belongs to exactly one campus - is what tells
- * a fresh install which campus to load. Until that's happened at least
- * once, a bare `/app/` visit doesn't get to just guess: it's sent to the
- * scanner instead (see the visitor-app spec - "a visitor scans a QR
- * sticker... and lands in a polished map experience").
- *
- * Returns the campus slug to run with, or null if the caller should stop
- * (a redirect is already in flight).
- */
-function resolveActiveCampusOrRedirect() {
-    const cameFromScan = !!config.explicitCampus;
-    const stored = getActiveCampus();
-
-    if (cameFromScan) {
-        setActiveCampus(config.campusSlug);
-        return config.campusSlug;
-    }
-
-    if (stored && stored !== config.campusSlug) {
-        // We already know a different campus than the one the server
-        // defaulted to (first campus) - reload scoped to the right one
-        // so the server-rendered map center/zoom are correct too.
-        window.location.href = `/app/?campus=${encodeURIComponent(stored)}`;
-        return null;
-    }
-
-    if (!stored) {
-        window.location.href = '/app/scan/';
-        return null;
-    }
-
-    return stored;
-}
-
 async function init() {
-    const activeCampusSlug = resolveActiveCampusOrRedirect();
-    if (!activeCampusSlug) return; // redirecting
-
-    setCampusSlug(activeCampusSlug);
-
     applyTheme(resolveIsDark());
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if (!getThemeOverride()) applyTheme(resolveIsDark());

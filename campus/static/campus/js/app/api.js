@@ -45,23 +45,9 @@ export class ApiError extends Error {
     }
 }
 
-// Which campus's data every campus-scoped call below fetches (locations,
-// nearby, boundary - the endpoints that don't already identify a campus
-// via a globally-unique code of their own). Set once by app.js after it
-// resolves the active campus (from a QR scan, the server's initial
-// render, or a remembered previous scan) - see store.getActiveCampus().
-let activeCampusSlug = '';
-export function setCampusSlug(slug) {
-    activeCampusSlug = slug || '';
-}
-
-function withCampus(params = {}) {
-    return activeCampusSlug ? { ...params, campus: activeCampusSlug } : params;
-}
-
 export const api = {
     locations(params = {}) {
-        return request(`/api/v2/locations/?${new URLSearchParams(withCampus(params))}`);
+        return request(`/api/v2/locations/?${new URLSearchParams(params)}`);
     },
     location(code) {
         return request(`/api/v2/locations/${encodeURIComponent(code)}/`);
@@ -73,14 +59,14 @@ export const api = {
         return request(`/api/v2/route/?${new URLSearchParams({ from_lat: lat, from_lng: lng, to: toCode })}`);
     },
     nearby(lat, lng, limit = 5) {
-        return request(`/api/v2/nearby/?${new URLSearchParams(withCampus({ lat, lng, limit }))}`);
+        return request(`/api/v2/nearby/?${new URLSearchParams({ lat, lng, limit })}`);
     },
     scan(code) {
         return request('/api/v2/scan/', { method: 'POST', body: { code } });
     },
     boundary(lat, lng) {
-        const base = lat != null && lng != null ? { lat, lng } : {};
-        return request(`/api/v2/boundary/?${new URLSearchParams(withCampus(base))}`);
+        const params = lat != null && lng != null ? { lat, lng } : {};
+        return request(`/api/v2/boundary/?${new URLSearchParams(params)}`);
     },
     tours() {
         return request('/api/v2/tours/');

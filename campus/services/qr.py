@@ -22,18 +22,6 @@ def build_location_url(request, location) -> str:
     return request.build_absolute_uri(path)
 
 
-def build_campus_url(request, campus) -> str:
-    """
-    Full absolute URL a CAMPUS's own QR sticker encodes, e.g.
-    https://host/c/main-campus/app/. Every campus gets a distinct code
-    this way (Campus.slug is already unique) - scanning it is how the
-    visitor app picks which campus to load the very first time it's
-    opened, before any Location has been scanned yet.
-    """
-    path = reverse('campus-qr-landing', args=[campus.slug])
-    return request.build_absolute_uri(path)
-
-
 def qr_png_bytes(url: str, *, box_size: int = 10, border: int = 2, logo_path: str | None = None) -> bytes:
     """
     Renders `url` as a PNG QR code.

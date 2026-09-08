@@ -76,48 +76,18 @@ export class Scanner {
     }
 
     _handleDecode(decodedText) {
+        // Accept a bare code or a full /l/<code>/ URL - use the last
+        // non-empty path segment either way.
+        const code = extractCode(decodedText);
         if (navigator.vibrate) navigator.vibrate(60);
-        // Raw decoded text goes straight to the caller - parseScannedPayload
-        // below is what tells a campus QR apart from a location QR, so the
-        // page decides what to do with it rather than this class guessing.
-        this.onDecode && this.onDecode(decodedText);
+        this.onDecode && this.onDecode(code, decodedText);
     }
 }
 
-/**
- * A scanned campus QR (/c/<slug>/app/) and a scanned location QR
- * (/l/<code>/) look enough alike (both are just URLs) that whoever
- * handles the decode needs to tell them apart before deciding what to
- * do. Also accepts a bare code (manual entry, or an unrecognised URL
- * shape) by falling back to its last path segment.
- */
-export function parseScannedPayload(raw) {
-    const trimmed = (raw || '').trim();
-    if (!trimmed) return { type: 'unknown', raw: '' };
-
-    let path = trimmed;
-    try {
-        path = new URL(trimmed).pathname;
-    } catch (err) {
-        // Not a full URL (e.g. manual entry of a bare code) - treat the
-        // whole string as a path with one segment.
-    }
-
-    const segments = path.replace(/\/+$/, '').split('/').filter(Boolean);
-
-    if (segments.length === 3 && segments[0] === 'c' && segments[2] === 'app') {
-        return { type: 'campus', slug: segments[1] };
-    }
-    if (segments.length === 2 && segments[0] === 'l') {
-        return { type: 'location', code: segments[1] };
-    }
-    return { type: 'location', code: segments[segments.length - 1] || trimmed };
-}
-
-/** @deprecated kept for callers that only need the old "just give me a
- * code" behaviour - prefer parseScannedPayload for anything that also
- * needs to recognise a campus QR. */
 export function extractCode(raw) {
-    const payload = parseScannedPayload(raw);
-    return payload.type === 'campus' ? payload.slug : payload.code || '';
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return '';
+    const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
+    const segments = withoutTrailingSlash.split('/');
+    return segments[segments.length - 1];
 }

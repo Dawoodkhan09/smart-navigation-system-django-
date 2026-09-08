@@ -51,16 +51,10 @@
     // beyond |escapejs): codes/slugs only ever contain [a-z0-9-] - see
     // Location.code / Tour.slug, both SlugFields.
     window.APP_CONFIG = {
-        campusSlug: "{{ campus.slug|escapejs }}",
         campusCenter: { lat: {{ campus.center_latitude }}, lng: {{ campus.center_longitude }} },
         defaultZoom: {{ campus.default_zoom }},
         atCode: "{{ at_code|escapejs }}",
         tourSlug: "{{ tour_slug|escapejs }}",
-        // Whether this page load actually came from a scan/link
-        // (?campus= or ?at=), vs. a bare /app/ visit that just landed on
-        // resolve_default_campus()'s fallback - see app.js's
-        // resolveActiveCampusOrRedirect().
-        explicitCampus: {{ explicit_campus|yesno:"true,false" }},
         unknownCode: new URLSearchParams(window.location.search).get('unknown') || '',
     };
 </script>

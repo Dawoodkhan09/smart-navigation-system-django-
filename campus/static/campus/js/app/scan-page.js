@@ -1,10 +1,9 @@
 // scan-page.js - bootstrap for /app/scan/ (campus/templates/campus/app/scan.html).
 // Wires the Scanner class (scanner.js) to the page's overlay/fallback UI.
 
-import { Scanner, parseScannedPayload } from './scanner.js';
+import { Scanner, extractCode } from './scanner.js';
 import { api } from './api.js';
 import { icon } from './icons.js';
-import { setActiveCampus } from './store.js';
 
 const el = {
     reader: document.getElementById('scanReader'),
@@ -42,26 +41,12 @@ scanner.start().then((started) => {
 });
 
 let handled = false;
-async function handleDecode(raw) {
+async function handleDecode(code) {
     if (handled) return;
     handled = true;
     await scanner.stop();
     showSuccess();
 
-    const payload = parseScannedPayload(raw);
-
-    // A campus QR (see Admin -> Campuses -> QR preview) just picks which
-    // campus to load - no ScanEvent/Location involved, so it skips
-    // straight to the redirect.
-    if (payload.type === 'campus') {
-        setActiveCampus(payload.slug);
-        setTimeout(() => {
-            window.location.href = `/app/?campus=${encodeURIComponent(payload.slug)}`;
-        }, 700);
-        return;
-    }
-
-    const code = payload.code;
     try {
         await api.scan(code);
     } catch (err) {
@@ -90,5 +75,5 @@ el.manualForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const raw = el.manualInput.value.trim();
     if (!raw) return;
-    handleDecode(raw);
+    handleDecode(extractCode(raw));
 });

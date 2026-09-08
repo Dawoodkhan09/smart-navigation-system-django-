@@ -4,30 +4,7 @@
 
 const LAST_SCAN_KEY = 'campus.lastScan';
 const THEME_KEY = 'campus.theme';
-const ACTIVE_CAMPUS_KEY = 'campus.activeCampus';
 const SCAN_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-/** Which campus the visitor scanned into last - set by a campus QR, a
- * location QR (every Location belongs to exactly one campus), or a
- * manual switch. Remembered indefinitely (no TTL, unlike lastScan) so
- * re-opening the app later still knows which campus to load without
- * asking again. */
-export function getActiveCampus() {
-    try {
-        return localStorage.getItem(ACTIVE_CAMPUS_KEY) || '';
-    } catch (err) {
-        return '';
-    }
-}
-
-export function setActiveCampus(slug) {
-    try {
-        if (slug) localStorage.setItem(ACTIVE_CAMPUS_KEY, slug);
-        else localStorage.removeItem(ACTIVE_CAMPUS_KEY);
-    } catch (err) {
-        /* ignore */
-    }
-}
 
 /** Records the Location the visitor just scanned/landed on as the
  * trusted routing origin for the next 30 minutes (see the visitor-app
