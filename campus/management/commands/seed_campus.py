@@ -22,8 +22,21 @@ Two things still need attention after this runs:
 
 from django.core.management.base import BaseCommand
 
-from campus.models import BoundaryPoint, GraphEdge, GraphNode, Location
+from campus.models import BoundaryPoint, Campus, GraphEdge, GraphNode, Location
 from campus.services import haversine
+
+# Matches the Campus row campus/migrations/0003_backfill_campus.py creates
+# for pre-multi-campus databases, so re-running this command against a
+# fresh install lands the data on the exact same campus.
+DEFAULT_CAMPUS = {
+    'name': 'Main Campus',
+    'slug': 'main-campus',
+    'center_latitude': 24.8844,
+    'center_longitude': 67.1720,
+    'default_zoom': 17,
+    'walking_speed_m_per_min': 80,
+    'default_geofence_radius': 50,
+}
 
 LOCATIONS = [
     {'name': 'Main Gate', 'description': 'Main entrance of the campus.', 'latitude': 24.88534020573535, 'longitude': 67.17154097985589, 'category': 'Entrance', 'geofence_radius': 30},
@@ -93,16 +106,20 @@ class Command(BaseCommand):
     help = 'Seeds the real campus locations, walkway graph and boundary polygon (no-op if already seeded).'
 
     def handle(self, *args, **options):
-        if Location.objects.exists() or GraphNode.objects.exists():
-            self.stdout.write(self.style.WARNING('Already seeded - skipping.'))
+        campus, created = Campus.objects.get_or_create(
+            slug=DEFAULT_CAMPUS['slug'], defaults=DEFAULT_CAMPUS
+        )
+
+        if Location.objects.filter(campus=campus).exists() or GraphNode.objects.filter(campus=campus).exists():
+            self.stdout.write(self.style.WARNING(f'{campus.name} is already seeded - skipping.'))
             return
 
         nodes_by_name = {}
 
         for loc in LOCATIONS:
-            Location.objects.create(**loc)
+            Location.objects.create(campus=campus, **loc)
             node = GraphNode.objects.create(
-                name=loc['name'], latitude=loc['latitude'], longitude=loc['longitude']
+                campus=campus, name=loc['name'], latitude=loc['latitude'], longitude=loc['longitude']
             )
             nodes_by_name[loc['name']] = node
 
@@ -122,8 +139,8 @@ class Command(BaseCommand):
             )
 
         for i, (lat, lng) in enumerate(BOUNDARY):
-            BoundaryPoint.objects.create(latitude=lat, longitude=lng, sequence_order=i)
+            BoundaryPoint.objects.create(campus=campus, latitude=lat, longitude=lng, sequence_order=i)
 
         self.stdout.write(self.style.SUCCESS(
-            f'Seeded {len(LOCATIONS)} locations, {len(EDGES)} edges, {len(BOUNDARY)} boundary points.'
+            f'Seeded {campus.name}: {len(LOCATIONS)} locations, {len(EDGES)} edges, {len(BOUNDARY)} boundary points.'
         ))

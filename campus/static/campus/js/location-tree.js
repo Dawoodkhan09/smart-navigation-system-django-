@@ -15,6 +15,7 @@
 
     const searchBox = document.getElementById('treeSearchBox');
     const mapUrl = treeEl.dataset.mapUrl || '/map/';
+    const locationsUrl = treeEl.dataset.locationsUrl || '/api/locations';
 
     let allLocations = [];
 
@@ -165,7 +166,7 @@
 
     async function loadTree() {
         try {
-            const res = await fetch('/api/locations');
+            const res = await fetch(locationsUrl);
             if (!res.ok) throw new Error('Request failed: ' + res.status);
             allLocations = await res.json();
             renderTree(allLocations, '');

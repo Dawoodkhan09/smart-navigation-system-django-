@@ -21,7 +21,7 @@
     window.allLocations = [];
 
     async function loadLocations() {
-        const res = await fetch('/api/locations');
+        const res = await fetch((window.API_ROUTES && window.API_ROUTES.locations) || '/api/locations');
         if (!res.ok) return;
         window.allLocations = await res.json();
         // Lets other scripts (e.g. the ?location=<id> deep-link handler in

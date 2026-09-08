@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Campus Boundary</h1>
+<p>Pick a campus to edit its boundary polygon.</p>
+
+{% if campuses %}
+    <ul>
+        {% for campus in campuses %}
+            <li>
+                <a href="{% url 'admin:campus_boundarypoint_editor' campus_id=campus.id %}">{{ campus.name }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No campuses have been added yet - add one from <a href="{% url 'admin:campus_campus_add' %}">Campuses</a> first.</p>
+{% endif %}
+{% endblock %}

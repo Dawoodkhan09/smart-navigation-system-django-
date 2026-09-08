@@ -1,16 +1,19 @@
 """
 Read-only + navigation JSON endpoints consumed by static/campus/js/map.js
 and navigation.js to draw markers, power the destination search box, and
-run the A* route calculation.
+run the A* route calculation. Every endpoint is scoped to one campus (the
+<campus_slug> in the URL - see campus/urls.py) so browsing/searching/
+routing never crosses into another campus's data.
 """
 
 import json
 
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import BoundaryPoint, Location
+from .models import BoundaryPoint, Campus, Location
 from .services import navigation
 
 
@@ -27,16 +30,18 @@ def _location_dto(location: Location) -> dict:
 
 
 @require_GET
-def location_list(request):
-    locations = Location.objects.order_by('name')
+def location_list(request, campus_slug):
+    campus = get_object_or_404(Campus, slug=campus_slug)
+    locations = Location.objects.filter(campus=campus).order_by('name')
     return JsonResponse([_location_dto(l) for l in locations], safe=False)
 
 
 @require_GET
-def location_search(request):
+def location_search(request, campus_slug):
+    campus = get_object_or_404(Campus, slug=campus_slug)
     q = request.GET.get('q', '').strip()
 
-    queryset = Location.objects.all()
+    queryset = Location.objects.filter(campus=campus)
     if q:
         from django.db.models import Q
         queryset = queryset.filter(
@@ -48,9 +53,10 @@ def location_search(request):
 
 
 @require_GET
-def location_detail(request, pk: int):
+def location_detail(request, campus_slug, pk: int):
+    campus = get_object_or_404(Campus, slug=campus_slug)
     try:
-        location = Location.objects.get(pk=pk)
+        location = Location.objects.get(campus=campus, pk=pk)
     except Location.DoesNotExist:
         return JsonResponse({'message': 'Not found.'}, status=404)
 
@@ -59,7 +65,9 @@ def location_detail(request, pk: int):
 
 @csrf_exempt
 @require_POST
-def navigation_route(request):
+def navigation_route(request, campus_slug):
+    campus = get_object_or_404(Campus, slug=campus_slug)
+
     try:
         data = json.loads(request.body or '{}')
     except json.JSONDecodeError:
@@ -75,7 +83,7 @@ def navigation_route(request):
             'message': 'startLatitude, startLongitude and destinationLocationId are required.',
         })
 
-    result = navigation.calculate_route(start_lat, start_lon, destination_location_id)
+    result = navigation.calculate_route(campus, start_lat, start_lon, destination_location_id)
 
     # Always 200, even on a "no path found" business-logic failure, so the
     # frontend can just read result.success / result.message.
@@ -83,8 +91,9 @@ def navigation_route(request):
 
 
 @require_GET
-def campus_boundary(request):
-    points = BoundaryPoint.objects.order_by('sequence_order')
+def campus_boundary(request, campus_slug):
+    campus = get_object_or_404(Campus, slug=campus_slug)
+    points = BoundaryPoint.objects.filter(campus=campus).order_by('sequence_order')
     return JsonResponse(
         [{'latitude': p.latitude, 'longitude': p.longitude} for p in points], safe=False
     )

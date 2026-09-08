@@ -59,7 +59,8 @@
     }
 
     async function performSearch(query) {
-        const res = await fetch('/api/locations/search?q=' + encodeURIComponent(query));
+        const searchUrl = (window.API_ROUTES && window.API_ROUTES.locationSearch) || '/api/locations/search';
+        const res = await fetch(searchUrl + '?q=' + encodeURIComponent(query));
         if (!res.ok) return [];
         return res.json();
     }
@@ -141,7 +142,8 @@
         navigateBtn.textContent = 'Calculating route...';
 
         try {
-            const res = await fetch('/api/navigation/route', {
+            const routeUrl = (window.API_ROUTES && window.API_ROUTES.navigationRoute) || '/api/navigation/route';
+            const res = await fetch(routeUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

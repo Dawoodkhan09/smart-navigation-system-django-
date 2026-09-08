@@ -114,11 +114,20 @@
 
 {% block scripts %}
     <script>
-        // Values injected from settings.py via campus.views.home.
+        // Values injected from the current Campus row via campus.views.map_view.
         window.CAMPUS_CONFIG = {
             centerLat: {{ map_center_latitude }},
             centerLng: {{ map_center_longitude }},
             defaultZoom: {{ default_zoom }}
+        };
+        // Every /api/... endpoint is scoped under this campus's slug (see
+        // campus/urls.py) - map.js/navigation.js/boundary.js read from
+        // here instead of hardcoding a path.
+        window.API_ROUTES = {
+            locations: "{% url 'api-location-list' campus_slug=campus.slug %}",
+            locationSearch: "{% url 'api-location-search' campus_slug=campus.slug %}",
+            navigationRoute: "{% url 'api-navigation-route' campus_slug=campus.slug %}",
+            campusBoundary: "{% url 'api-campus-boundary' campus_slug=campus.slug %}"
         };
     </script>
     <script src="{% static 'campus/js/haversine.js' %}"></script>

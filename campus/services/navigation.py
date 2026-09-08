@@ -14,14 +14,17 @@ from campus.models import GraphEdge, GraphNode, Location
 from . import astar, haversine
 
 
-def calculate_route(start_lat: float, start_lon: float, destination_location_id: int) -> dict:
+def calculate_route(campus, start_lat: float, start_lon: float, destination_location_id: int) -> dict:
     try:
-        destination = Location.objects.get(pk=destination_location_id)
+        destination = Location.objects.get(campus=campus, pk=destination_location_id)
     except Location.DoesNotExist:
         return {'success': False, 'message': 'Destination not found.'}
 
-    all_nodes = list(GraphNode.objects.all())
-    all_edges = list(GraphEdge.objects.all())
+    # Scoped to this campus only - otherwise "nearest node" could pick a
+    # node from a different campus, and A* could wander into a graph that
+    # has nothing to do with where the user actually is.
+    all_nodes = list(GraphNode.objects.filter(campus=campus))
+    all_edges = list(GraphEdge.objects.filter(from_node__campus=campus))
 
     if not all_nodes:
         return {

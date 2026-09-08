@@ -10,7 +10,7 @@
             <h1 class="tree-title">Where do you want to go?</h1>
             <p class="tree-subtitle">Pick a place below and the map will open centered right on it.</p>
         </div>
-        <a href="{% url 'map' %}" class="tree-skip-link">
+        <a href="{% url 'map' campus_slug=campus.slug %}" class="tree-skip-link">
             Skip to full map
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -29,7 +29,9 @@
         </div>
     </div>
 
-    <div id="locationTree" class="location-tree" data-map-url="{% url 'map' %}">
+    <div id="locationTree" class="location-tree"
+         data-map-url="{% url 'map' campus_slug=campus.slug %}"
+         data-locations-url="{% url 'api-location-list' campus_slug=campus.slug %}">
         <div class="tree-loading">Loading locations…</div>
     </div>
 </div>

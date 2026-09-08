@@ -8,11 +8,11 @@
 {% endblock %}
 
 {% block content %}
-<h1>Campus Boundary</h1>
+<h1>Campus Boundary — {{ campus.name }}</h1>
 <p>
-    This is the real outline of the campus - not a circle. Click the map,
-    in order, around the campus edge (gate, boundary wall corners, ...).
-    Each click is saved immediately as the next point of the polygon.
+    This is the real outline of {{ campus.name }} - not a circle. Click the
+    map, in order, around the campus edge (gate, boundary wall corners,
+    ...). Each click is saved immediately as the next point of the polygon.
 </p>
 
 <div style="display:flex;gap:2em;flex-wrap:wrap;">
@@ -52,10 +52,10 @@
     };
     window.INITIAL_BOUNDARY_POINTS = {{ initial_points_json }};
     window.BOUNDARY_ROUTES = {
-        addPoint: "{% url 'admin:campus_boundarypoint_add_point' %}",
-        removeLastPoint: "{% url 'admin:campus_boundarypoint_remove_last_point' %}",
-        clearAll: "{% url 'admin:campus_boundarypoint_clear_all' %}",
-        importPoints: "{% url 'admin:campus_boundarypoint_import_points' %}"
+        addPoint: "{% url 'admin:campus_boundarypoint_add_point' campus_id=campus.id %}",
+        removeLastPoint: "{% url 'admin:campus_boundarypoint_remove_last_point' campus_id=campus.id %}",
+        clearAll: "{% url 'admin:campus_boundarypoint_clear_all' campus_id=campus.id %}",
+        importPoints: "{% url 'admin:campus_boundarypoint_import_points' campus_id=campus.id %}"
     };
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

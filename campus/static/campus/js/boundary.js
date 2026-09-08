@@ -9,7 +9,7 @@
     let isInsideCampus = null; // null = unknown yet, true/false once we have a GPS fix
 
     async function loadBoundary() {
-        const res = await fetch('/api/campus-boundary');
+        const res = await fetch((window.API_ROUTES && window.API_ROUTES.campusBoundary) || '/api/campus-boundary');
         if (!res.ok) return;
 
         const points = await res.json();

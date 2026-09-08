@@ -1,0 +1,36 @@
+{% extends "campus/base.html" %}
+
+{% block title %}Choose a Campus{% endblock %}
+
+{% block content %}
+<div class="tree-page">
+    <div class="tree-header">
+        <div>
+            <h1 class="tree-title">Which campus?</h1>
+            <p class="tree-subtitle">Pick a campus to browse its locations and map.</p>
+        </div>
+    </div>
+
+    <div class="location-tree">
+        {% if campuses %}
+            <div class="tree-branch is-open">
+                <div class="tree-branch-inner">
+                    {% for campus in campuses %}
+                        <a href="{% url 'tree' campus_slug=campus.slug %}" class="tree-node">
+                            <span class="tree-node-dot" aria-hidden="true"></span>
+                            <span class="tree-node-body">
+                                <span class="tree-node-name">{{ campus.name }}</span>
+                            </span>
+                            <svg class="tree-node-arrow" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="9,6 15,12 9,18"></polyline>
+                            </svg>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="tree-empty">No campuses have been added yet - add one from the admin panel.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

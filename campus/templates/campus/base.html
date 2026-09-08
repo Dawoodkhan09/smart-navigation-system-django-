@@ -17,7 +17,7 @@
 <body>
     <nav class="navbar navbar-expand-sm site-navbar mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'tree' %}">
+            <a class="navbar-brand" href="{% if campus %}{% url 'tree' campus_slug=campus.slug %}{% else %}{% url 'campus-picker' %}{% endif %}">
                 <span class="brand-mark">
                     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                         <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
@@ -25,17 +25,22 @@
                     </svg>
                 </span>
                 <span class="brand-text">Campus<strong>Nav</strong></span>
+                {% if campus %}<span class="brand-campus">{{ campus.name }}</span>{% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navMenu">
                 <ul class="navbar-nav ms-auto align-items-sm-center gap-sm-1">
-                    <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'tree' %}active{% endif %}" href="{% url 'tree' %}">Locations</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'map' %}active{% endif %}" href="{% url 'map' %}">Map</a></li>
+                    {% if campus %}
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'tree' %}active{% endif %}" href="{% url 'tree' campus_slug=campus.slug %}">Locations</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'map' %}active{% endif %}" href="{% url 'map' campus_slug=campus.slug %}">Map</a></li>
+                    {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admin</a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'admin:campus_campus_changelist' %}">Campuses</a></li>
+                            <li><hr class="dropdown-divider" /></li>
                             <li><a class="dropdown-item" href="{% url 'admin:campus_location_changelist' %}">Locations</a></li>
                             <li><a class="dropdown-item" href="{% url 'admin:campus_graphnode_changelist' %}">Graph Nodes</a></li>
                             <li><a class="dropdown-item" href="{% url 'admin:campus_graphedge_changelist' %}">Graph Edges</a></li>
