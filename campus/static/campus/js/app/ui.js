@@ -53,9 +53,9 @@ export function renderEmptyState(container, { message, actionLabel, onAction } =
     }
 }
 
-export function renderBrowseList(container, locations, { userPosition, onSelect } = {}) {
+export function renderBrowseList(container, locations, { userPosition, onSelect, onClearFilters } = {}) {
     if (!locations.length) {
-        renderEmptyState(container, { message: 'No places match your search.', actionLabel: 'Clear filters' });
+        renderEmptyState(container, { message: 'No places match your search.', actionLabel: 'Clear filters', onAction: onClearFilters });
         return;
     }
 

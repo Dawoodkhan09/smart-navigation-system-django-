@@ -17,6 +17,7 @@ const config = window.APP_CONFIG || {};
 
 const state = {
     locations: [],
+    browseResults: [], // currently-shown sheet list - see refreshBrowseResults()
     activeCategory: '',
     searchTerm: '',
     userPosition: null,
@@ -25,6 +26,8 @@ const state = {
     routeSteps: null,
     routePath: null,
 };
+
+let searchDebounceTimer = null;
 
 const el = {
     map: document.getElementById('map'),
@@ -121,8 +124,11 @@ async function loadBoundary() {
 
 function bindTopBar() {
     el.searchInput.addEventListener('input', () => {
-        state.searchTerm = el.searchInput.value.trim().toLowerCase();
-        if (state.mode === 'browse') renderBrowse();
+        state.searchTerm = el.searchInput.value.trim();
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            if (state.mode === 'browse') refreshBrowseResults();
+        }, 200);
     });
     el.scanButton.addEventListener('click', () => {
         window.location.href = '/app/scan/';
@@ -133,25 +139,61 @@ function onCategorySelect(category) {
     state.activeCategory = category;
     ui.renderCategoryChips(el.chips, category, onCategorySelect);
     campusMap.filterByCategory(category);
-    if (state.mode === 'browse') renderBrowse();
+    if (state.mode === 'browse') refreshBrowseResults();
 }
 
-function filteredLocations() {
-    return state.locations.filter((loc) => {
-        if (state.activeCategory && loc.category.toLowerCase() !== state.activeCategory) return false;
-        if (!state.searchTerm) return true;
-        const haystack = `${loc.name} ${loc.shortDescription} ${loc.category}`.toLowerCase();
-        return haystack.includes(state.searchTerm);
+/**
+ * Re-fetches the sheet's location list from the server whenever a search
+ * term or category is active. This has to go through the API rather than
+ * filtering the already-loaded `state.locations` client-side: that array
+ * only carries what the map needs (name/category/short one-liner), not
+ * each building's full room/class listing - a building's `description`
+ * (e.g. "Ground floor: CS HOD, Faculty room 2-5...") is what a search for
+ * a specific class actually has to match against, and only the server
+ * has that (see api_views.v2_location_list's `q` handling). An empty
+ * search with no category just reuses the already-loaded full list.
+ */
+async function refreshBrowseResults() {
+    state.mode = 'browse';
+    sheet.el.setAttribute('data-mode', 'browse');
+
+    if (!state.searchTerm && !state.activeCategory) {
+        state.browseResults = state.locations;
+        renderBrowseFromCache();
+        return;
+    }
+
+    try {
+        state.browseResults = await api.locations({ q: state.searchTerm, category: state.activeCategory });
+    } catch (err) {
+        state.browseResults = [];
+    }
+    renderBrowseFromCache();
+}
+
+/** Re-renders the sheet list from whatever refreshBrowseResults() last
+ * fetched, without hitting the server again - used for cheap refreshes
+ * like a live GPS update changing the shown distances. */
+function renderBrowseFromCache() {
+    ui.renderBrowseList(el.sheetContent, state.browseResults, {
+        userPosition: state.userPosition,
+        onSelect: selectLocation,
+        onClearFilters: () => {
+            state.searchTerm = '';
+            state.activeCategory = '';
+            el.searchInput.value = '';
+            ui.renderCategoryChips(el.chips, '', onCategorySelect);
+            campusMap.filterByCategory('');
+            refreshBrowseResults();
+        },
     });
 }
 
 function renderBrowse() {
     state.mode = 'browse';
     sheet.el.setAttribute('data-mode', 'browse');
-    ui.renderBrowseList(el.sheetContent, filteredLocations(), {
-        userPosition: state.userPosition,
-        onSelect: selectLocation,
-    });
+    state.browseResults = state.locations;
+    renderBrowseFromCache();
 }
 
 // --- Place selection -----------------------------------------------------
@@ -325,7 +367,9 @@ const geoTracker = new GeoTracker({
     onPosition: (point) => {
         state.userPosition = point;
         campusMap.showYouAreHere(point.lat, point.lng);
-        if (state.mode === 'browse') renderBrowse();
+        // Cache-only re-render (not refreshBrowseResults()) - a GPS tick
+        // just needs to update the shown distances, not re-run the search.
+        if (state.mode === 'browse') renderBrowseFromCache();
     },
     onStatus: setStatus,
     onBoundaryChange: (inside) => {
