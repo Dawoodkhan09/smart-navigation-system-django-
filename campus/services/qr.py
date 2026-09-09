@@ -22,6 +22,18 @@ def build_location_url(request, location) -> str:
     return request.build_absolute_uri(path)
 
 
+def build_campus_url(request, campus) -> str:
+    """
+    Full absolute URL a CAMPUS's own QR sticker encodes, e.g.
+    https://host/app/c/main-campus/. Scanning it locks the visitor's
+    session to this campus (see campus.views.campus_qr_landing) and sends
+    them straight into its map - they can't browse another campus's data
+    afterwards without scanning a QR that belongs to it instead.
+    """
+    path = reverse('campus-qr-landing', args=[campus.slug])
+    return request.build_absolute_uri(path)
+
+
 def qr_png_bytes(url: str, *, box_size: int = 10, border: int = 2, logo_path: str | None = None) -> bytes:
     """
     Renders `url` as a PNG QR code.

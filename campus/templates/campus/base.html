@@ -47,6 +47,19 @@
                             <li><a class="dropdown-item" href="{% url 'admin:campus_boundarypoint_changelist' %}">Campus Boundary</a></li>
                         </ul>
                     </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">{{ user.username }}</a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <form method="post" action="{% url 'logout' %}" class="px-3 py-1">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link dropdown-item p-0">Sign out</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

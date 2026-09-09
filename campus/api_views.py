@@ -8,6 +8,7 @@ routing never crosses into another campus's data.
 
 import json
 
+from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +16,12 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .models import BoundaryPoint, Campus, Location, ScanEvent, Tour
 from .services import directions, geometry, navigation
+
+# Session key set once a visitor scans any QR (a campus's own, or one of
+# its Locations') - see campus.views._lock_session_to_campus. Shared here
+# (not duplicated in views.py) since resolve_default_campus below is what
+# actually enforces it.
+SESSION_LOCKED_CAMPUS_KEY = 'locked_campus_slug'
 
 
 def _location_dto(location: Location) -> dict:
@@ -29,6 +36,7 @@ def _location_dto(location: Location) -> dict:
     }
 
 
+@login_required
 @require_GET
 def location_list(request, campus_slug):
     campus = get_object_or_404(Campus, slug=campus_slug)
@@ -36,6 +44,7 @@ def location_list(request, campus_slug):
     return JsonResponse([_location_dto(l) for l in locations], safe=False)
 
 
+@login_required
 @require_GET
 def location_search(request, campus_slug):
     campus = get_object_or_404(Campus, slug=campus_slug)
@@ -52,6 +61,7 @@ def location_search(request, campus_slug):
     return JsonResponse([_location_dto(l) for l in locations], safe=False)
 
 
+@login_required
 @require_GET
 def location_detail(request, campus_slug, pk: int):
     campus = get_object_or_404(Campus, slug=campus_slug)
@@ -63,6 +73,7 @@ def location_detail(request, campus_slug, pk: int):
     return JsonResponse(_location_dto(location))
 
 
+@login_required
 @csrf_exempt
 @require_POST
 def navigation_route(request, campus_slug):
@@ -90,6 +101,7 @@ def navigation_route(request, campus_slug):
     return JsonResponse(result)
 
 
+@login_required
 @require_GET
 def campus_boundary(request, campus_slug):
     campus = get_object_or_404(Campus, slug=campus_slug)
@@ -114,13 +126,36 @@ def campus_boundary(request, campus_slug):
 
 
 def resolve_default_campus(request):
+    """
+    Which campus a request without an explicit <campus_slug> in the URL
+    (every /app/... page and every /api/v2/... endpoint below) is for.
+
+    Priority: 1) a campus the visitor is locked to, from having scanned a
+    QR (see campus.views._lock_session_to_campus) - this always wins, so
+    a ?campus=<slug> query param can't be used to hop to another campus
+    once a visitor has scanned their way into one; 2) an explicit
+    ?campus=<slug> (only reachable before any QR has been scanned yet -
+    useful for local testing); 3) the first Campus, as a last resort.
+    """
+    locked_slug = request.session.get(SESSION_LOCKED_CAMPUS_KEY)
+    if locked_slug:
+        return get_object_or_404(Campus, slug=locked_slug)
+
     slug = request.GET.get('campus')
     if slug:
         return get_object_or_404(Campus, slug=slug)
+
     campus = Campus.objects.first()
     if campus is None:
         raise Http404('No campus has been configured yet.')
     return campus
+
+
+def _get_locked_campus(request):
+    """The Campus a visitor's session is locked to, or None if they
+    haven't scanned anything (yet)."""
+    slug = request.session.get(SESSION_LOCKED_CAMPUS_KEY)
+    return Campus.objects.filter(slug=slug).first() if slug else None
 
 
 def _v2_location_dto(location: Location, request) -> dict:
@@ -195,6 +230,15 @@ def v2_location_list(request):
 @require_GET
 def v2_location_detail(request, code):
     location = get_object_or_404(Location, code=code, is_published=True)
+
+    # Locked-in visitors can't look up a Location outside their own
+    # campus this way either, not just via ?campus= on the list endpoint -
+    # treated as 404 (not "found but forbidden") so it doesn't even
+    # confirm the code exists on another campus.
+    locked = _get_locked_campus(request)
+    if locked and location.campus_id != locked.id:
+        raise Http404
+
     return JsonResponse(_v2_location_detail_dto(location, request))
 
 
@@ -219,15 +263,21 @@ def v2_route(request):
     if not to_code:
         return JsonResponse({'error': 'missing_params', 'message': '"to" query param is required.'}, status=400)
 
+    locked = _get_locked_campus(request)
+
     try:
         destination = Location.objects.get(code=to_code)
     except Location.DoesNotExist:
+        return JsonResponse({'error': 'unknown_code'}, status=404)
+    if locked and destination.campus_id != locked.id:
         return JsonResponse({'error': 'unknown_code'}, status=404)
 
     if from_code:
         try:
             origin = Location.objects.get(code=from_code)
         except Location.DoesNotExist:
+            return JsonResponse({'error': 'unknown_code'}, status=404)
+        if locked and origin.campus_id != locked.id:
             return JsonResponse({'error': 'unknown_code'}, status=404)
         result = navigation.calculate_route_between_locations(origin, destination)
         origin_name = origin.name
@@ -304,6 +354,14 @@ def v2_scan(request):
 
     if not location:
         return JsonResponse({'error': 'unknown_code'}, status=404)
+
+    # Scanning any valid QR is what grants access to a campus (see
+    # campus.views._lock_session_to_campus for the /l/<code>/ and
+    # /app/c/<slug>/ landing equivalents) - the in-app scanner goes
+    # through this endpoint instead, so it re-locks here too, even
+    # switching a previously-locked session to a different campus if
+    # that's genuinely what was just scanned.
+    request.session[SESSION_LOCKED_CAMPUS_KEY] = location.campus.slug
 
     return JsonResponse(_v2_location_detail_dto(location, request))
 

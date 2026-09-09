@@ -6,6 +6,17 @@ Same real campus map, search, A* walking-route pathfinding, geofencing,
 campus-boundary check, and admin panel — rebuilt on Django, with Django's
 built-in admin replacing the original's hand-rolled `/admin/*` CRUD.
 
+## Two audiences, two surfaces
+
+- **`/`, `/c/<slug>/...`, `/admin/`** — the browser-based web app. This is
+  the **admin's** tool (manage locations/graph/boundary, browse the map
+  while doing so) and now requires **logging in** (see "Web app login"
+  below) - the same account either way.
+- **`/app/...`** — the mobile-first visitor app. This is what **regular
+  users** (students/visitors) use on their own phones, reached by
+  scanning a QR code. No login, no account - a QR code is what grants
+  access (see "Visitor app" below).
+
 ## Stack
 
 - Django 5.x, SQLite (default, no extra services to run).
@@ -18,30 +29,63 @@ built-in admin replacing the original's hand-rolled `/admin/*` CRUD.
 - `qrcode[pil]` + `Pillow` for QR-code generation and Location/Tour
   photo uploads (see Config below for `MEDIA_URL`/`MEDIA_ROOT`).
 
+## Web app login
+
+`/`, `/c/<slug>/...` (both the pages and their `/api/...` endpoints) now
+require being logged in - `@login_required` in `views.py`/`api_views.py`,
+`LOGIN_URL` pointing at a dedicated `campus/login.html` page (not the
+Django-admin-styled `/admin/login/`, though it's the same underlying
+account either way). Sign in at `/login/`; an unauthenticated visit to
+any protected page redirects there with `?next=` and returns you to
+where you were headed once you're signed in. `/admin/` keeps its own
+separate login screen as before - both use the same `auth.User` table.
+
 ## Visitor app (QR scan → live map guide)
 
 A second, mobile-first surface at **`/app/`**, separate from the
 Bootstrap map/admin above (own base template, own `app.css`, no
-Bootstrap). A visitor scans a QR sticker on a building with their
-phone's stock camera → lands on `/l/<code>/` → redirected into `/app/`
-already centered on that place, with a bottom sheet for browsing,
-directions, and a guided tour mode.
+Bootstrap, no login). A visitor scans a QR sticker with their phone's
+stock camera → lands in a polished map experience already centered on
+the right place, with a bottom sheet for browsing, directions, and a
+guided tour mode.
+
+**Two kinds of QR code - scanning either one is what grants access:**
+
+- **Campus QR** (Admin → Campuses → open one → QR preview) - encodes
+  `/app/c/<slug>/`. Scanning it locks the visitor's session to that
+  campus and sends them straight into its map.
+- **Location QR** (Admin → Locations → open one → QR preview) - encodes
+  `/l/<code>/`; scanning it locks the session to *that Location's*
+  campus the same way, in addition to opening straight on that place.
+
+Once a session is locked to a campus, it stays locked: `resolve_default_campus()`
+in `api_views.py` ignores a `?campus=<slug>` query param from then on, and
+`/api/v2/locations/<code>/` + `/api/v2/route/` 404 for anything outside
+the locked campus even if the code/slug is otherwise valid - a scanned-in
+visitor can't browse or route to another campus's data through the same
+session. Scanning a *different* campus's QR (or one of its Locations')
+re-locks to that one instead - any valid QR is itself the "permission" to
+switch. A session that hasn't scanned anything yet falls back to the
+first Campus, same as before.
 
 - **Pages**: `/app/` (map + sheet), `/app/scan/` (in-app camera
-  scanner), `/app/tour/<slug>/` (guided tour), `/l/<code>/` (QR
-  landing → records a `ScanEvent` → redirects into `/app/?at=<code>`).
+  scanner), `/app/tour/<slug>/` (guided tour), `/l/<code>/` and
+  `/app/c/<slug>/` (QR landings - the Location one records a
+  `ScanEvent` too, both lock the session and redirect into `/app/`).
 - **API**: `campus/api_views.py`'s `/api/v2/...` endpoints (locations,
   location detail + nearby, route + turn-by-turn steps, nearby, scan,
   boundary + inside/outside, tours) — all plain `JsonResponse`, no DRF,
   reusing the existing `services/astar.py`/`haversine.py` for routing.
   `code` (`Location.code`, e.g. `main-gate`) is globally unique across
   every campus, so most v2 endpoints don't need a campus slug in the URL
-  the way the v1 ones under `/c/<slug>/...` do.
+  the way the v1 ones under `/c/<slug>/...` do - the session lock above
+  is what scopes them instead.
 - **QR codes**: generated on demand from `campus/services/qr.py` (error
   correction level H, so a weathered/scuffed outdoor sticker still
-  scans). Admin → Locations → open one to see/download its QR PNG, or
-  select several and use the "Print QR sheet for selected locations"
-  action for a print-ready A4 sheet (3×4 grid).
+  scans). Admin → Campuses or Locations → open one to see/download its
+  QR PNG; Locations additionally support selecting several and using
+  the "Print QR sheet for selected locations" action for a print-ready
+  A4 sheet (3×4 grid).
 - **PWA**: `/manifest.webmanifest` and `/sw.js` are served from the root
   urlconf (not `static/`) so the service worker's scope covers the whole
   site, not just `/static/campus/js/`. Installable to a phone's home

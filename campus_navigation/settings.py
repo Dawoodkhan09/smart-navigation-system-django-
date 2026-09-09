@@ -147,6 +147,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# Auth - the browser-based web app ('/', '/c/<slug>/...') is the admin's
+# own tool (manage locations/graph/boundary, browse the map while doing
+# so) and now requires logging in, same as /admin/ already did; the
+# visitor-facing mobile app under /app/... stays public/unauthenticated
+# on purpose - that's what QR-scanning visitors use, they never see this
+# login page.
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'campus-picker'
+LOGOUT_REDIRECT_URL = 'login'
+
+
 # Campus-wide settings, mirrored from the original Laravel app's
 # config/campus.php (itself mirrored from an earlier ASP.NET Core
 # "CampusSettings" section). Values default to this campus's real
